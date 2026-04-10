@@ -14,20 +14,25 @@ I'd like to call these Greek letters **Arcospheres**.
 
 ## How to Run
 - Install .NET 6.0
+- [.NET 6.0 SDK or higher For Windoe](https://dotnet.microsoft.com/download)
 
 **Arch-based systems:**
-''' sudo pacman -S dotnet-sdk-6.0 '''
+```Bash
+sudo pacman -S dotnet-sdk-6.0
+```
 (Higher versions may also work)
 
 ### Compile from source
-''' git clone [this-repo-link]
+```Bash
+git clone [this-repo-link]
 cd UFIG/
-dotnet run '''
-
+dotnet run
+```
 ### Download from release
-''' cd ~/path/to/downloaded/folder
-dotnet run '''
-
+```Bash
+cd ~/path/to/downloaded/folder
+dotnet run
+```
 
 ## Controls
 - `S` — Go to shop
@@ -37,7 +42,7 @@ dotnet run '''
 - `B` — Go back (from upgrade description)
 
 ## Mentions
-- The game is inspired by a certain factory game's core loop. I tried to capture its addicting nature. I did try, okay?
+- The game is inspired by a certain factory game's core loop... its factorio okay,also I tried to capture its addicting nature. I did try, okay?
 - The name "Arcospheres" is inspired by the Factorio mod **Space Exploration**. I was fascinated by the Arcosphere puzzle and the balancing aspect — I plan to turn that into gameplay later.  
 To the Space Exploration modder(s): Pls dont sue meeee.  
 Check it out: https://mods.factorio.com/mod/space-exploration
