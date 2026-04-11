@@ -112,9 +112,9 @@ class Program
 
                 // will be in Alpha, i wont bother specifying it here, buy function have to handle this
                 // also no Price scaling.. for now
-                EssenceBaseBought = 0,
+                EssenceBaseBought = 1,
                 EssenceBaseCost = 5,
-                EssenceMultiplierBought = 0,
+                EssenceMultiplierBought = 1,
                 EssenceMultiplierCost = 50,
 
                 FactoryInputUpgradeBought = 1,
