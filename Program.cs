@@ -27,7 +27,7 @@ using Spectre.Console;
 
 class Program
 {
-        static float Essence = 1000.0f;
+        static float Essence = 1.0f;
 
         static DateTime LastGameTick = DateTime.Now;
         static DateTime LastDisplayTick = DateTime.Now;
@@ -87,20 +87,20 @@ class Program
         static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
 
         static ResourceBP ResourceWallet = new ResourceBP {
-                AlphaAmount = 1000.0f,
+                AlphaAmount = 0.0f,
                 AlphaProdPerTick = 0.0f,
 
-                BetaAmount = 1000.0f,
+                BetaAmount = 0.0f,
                 BetaProdPerTick = 0.0f,
 
-                GammaAmount = 1000.0f,
+                GammaAmount = 0.0f,
                 GammaProdPerTick = 0.0f
         };
 
         static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
-                AlphaFactory = 20,
-                BetaFactory = 10,
-                GammaFactory = 5,
+                AlphaFactory = 0,
+                BetaFactory = 0,
+                GammaFactory = 0,
 
                 AlphaFactoryStatus = true,
                 BetaFactoryStatus = true,
@@ -112,9 +112,9 @@ class Program
 
                 // will be in Alpha, i wont bother specifying it here, buy function have to handle this
                 // also no Price scaling.. for now
-                EssenceBaseBought = 10,
+                EssenceBaseBought = 0,
                 EssenceBaseCost = 5,
-                EssenceMultiplierBought = 5,
+                EssenceMultiplierBought = 0,
                 EssenceMultiplierCost = 50,
 
                 FactoryInputUpgradeBought = 1,
