@@ -621,7 +621,7 @@ public static class Program
                         UpgradeTrack.EssenceMultiplierBought = SaveData.GetProperty("EssenceMultiplier").GetInt32();
 
                         UpgradeTrack.FactoryInputUpgradeBought = SaveData.GetProperty("FactoryInputUpgrade").GetInt32();
-                        UpgradeTrack.FactoryInputUpgradeBought = SaveData.GetProperty("FactoryOutputUpgrade").GetInt32();
+                        UpgradeTrack.FactoryOutputUpgradeBought = SaveData.GetProperty("FactoryOutputUpgrade").GetInt32();
 
                         AnsiConsole.MarkupLine("[green]Done![/]");
                         Thread.Sleep(500);
@@ -823,10 +823,6 @@ public static class StringsStuff
                 $"\n" +
                 $" -> Make Factory input system safer Press 6 to see \n" +
                 $" -> Make Factory Production line Smarter Press 7 to see \n"
-        ;
-
-        public static string ShopEntryPanel0 =>
-
         ;
 
         public static string ShopEntryPanel1 =>

@@ -8,7 +8,7 @@ I'd like to call these Greek letters **Arcospheres**.
 
 ## What It Currently Has
 - Production Chain (Essence → Alpha → Beta → Gamma)
-- 5 Upgrades (buy factories with Essence + Arcospheres for Essence upgrades)
+- 7 Upgrades (buy factories with Essence + Arcospheres for Essence upgrades)
 - Save / Load System
 - Cool UI (maybe)
 
@@ -56,3 +56,5 @@ Check it out: https://mods.factorio.com/mod/space-exploration
 
 ### My Notes
 If you like this, thank you! But I don't want to get your hopes up. I'm not a good programmer, nor a consistent one, but I do want to put work into this game of mine.
+
+The game window is only accounting 1280x720 screens.
