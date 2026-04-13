@@ -5,8 +5,8 @@
  * [/] Finish Shop basic functionalities
  * [/] Essence Upgrades
  * [/] Start making the early Game loop
- * [] Add texts, Start sequences, doialogues and stuff.
- * [/] Finally add all shop texts
+ * [ish] Add texts, Start sequences, doialogues and stuff.
+ * [ish] Finally add all shop texts
  * [ish] Polish UI
  * ... Later, further here is midgame stuff, goal before? have a fun Gameloop! ...
  *
@@ -29,25 +29,17 @@ using static StringsStuff;
 
 public static class Program
 {
-        public static float Essence = 1.0f;
-
         static DateTime LastGameTick = DateTime.Now;
         static DateTime LastDisplayTick = DateTime.Now;
+        static DateTime LastEventTick = DateTime.Now;
+
+        static int EventToShow = 0; // default 0 : show none
 
         struct ResourceDelta {
                 public float Alpha;
                 public float Beta;
                 public float Gamma;
                 public float Essence;
-        }
-
-        public struct ResourceBP {
-                public float AlphaAmount;
-                public float AlphaProdPerTick;
-                public float BetaAmount;
-                public float BetaProdPerTick;
-                public float GammaAmount;
-                public float GammaProdPerTick;
         }
 
         public struct UpgradeTrackBP {
@@ -88,16 +80,10 @@ public static class Program
 
         static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
 
-        public static ResourceBP ResourceWallet = new ResourceBP {
-                AlphaAmount = 0.0f,
-                AlphaProdPerTick = 0.0f,
-
-                BetaAmount = 0.0f,
-                BetaProdPerTick = 0.0f,
-
-                GammaAmount = 0.0f,
-                GammaProdPerTick = 0.0f
-        };
+        public static ResourceBP AlphaWallet = new ResourceBP(0.0f);
+        public static ResourceBP BetaWallet = new ResourceBP(0.0f);
+        public static ResourceBP GammaWallet = new ResourceBP(0.0f);
+        public static ResourceBP EssenceWallet = new ResourceBP(1.0f);
 
         public static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
                 AlphaFactory = 0,
@@ -119,9 +105,9 @@ public static class Program
                 EssenceMultiplierBought = 1,
                 EssenceMultiplierCost = 50,
 
-                FactoryInputUpgradeBought = 1,
+                FactoryInputUpgradeBought = 0,
                 FactoryInputUpgradeCost = 50, // gamma
-                FactoryOutputUpgradeBought = 1,
+                FactoryOutputUpgradeBought = 0,
                 FactoryOutputUpgradeCost = 100 // gamma
         };
 
@@ -162,8 +148,16 @@ public static class Program
 
                         }
 
+                        if ((now - LastEventTick).TotalSeconds >= 1.0) {
+
+                        }
+
                         Thread.Sleep(10);
                 }
+        }
+
+        static void HandleEvents() {
+
         }
 
         static void PauseHandler() {
@@ -209,9 +203,9 @@ public static class Program
                 bool HaltBetaFactory = false;
                 bool HaltGammaFactory = false;
 
-                if (AlphaFactoryNeedEssence > Essence || UpgradeTrack.AlphaFactory == 0) HaltAlphaFactory = true;
-                if (BetaFactoryNeedAlpha > ResourceWallet.AlphaAmount || UpgradeTrack.BetaFactory == 0) HaltBetaFactory = true;
-                if (GammaFactoryNeedAlpha > ResourceWallet.AlphaAmount || GammaFactoryNeedBeta > ResourceWallet.BetaAmount || GammaFactoryNeedEssence > Essence || UpgradeTrack.GammaFactory == 0) HaltGammaFactory = true;
+                if (AlphaFactoryNeedEssence > EssenceWallet.Amount || UpgradeTrack.AlphaFactory == 0) HaltAlphaFactory = true;
+                if (BetaFactoryNeedAlpha > AlphaWallet.Amount || UpgradeTrack.BetaFactory == 0) HaltBetaFactory = true;
+                if (GammaFactoryNeedAlpha > AlphaWallet.Amount || GammaFactoryNeedBeta > BetaWallet.Amount || GammaFactoryNeedEssence > EssenceWallet.Amount || UpgradeTrack.GammaFactory == 0) HaltGammaFactory = true;
 
                 // Alpha Factory block
                 if (HaltAlphaFactory) {
@@ -249,10 +243,10 @@ public static class Program
         }
 
         static void PushPending() {
-                ResourceWallet.AlphaAmount += Pending.Alpha;
-                ResourceWallet.BetaAmount += Pending.Beta;
-                ResourceWallet.GammaAmount += Pending.Gamma;
-                Essence += Pending.Essence;
+                AlphaWallet.Amount += Pending.Alpha;
+                BetaWallet.Amount += Pending.Beta;
+                GammaWallet.Amount += Pending.Gamma;
+                EssenceWallet.Amount += Pending.Essence;
         }
 
         static void WipePending() {
@@ -291,8 +285,8 @@ public static class Program
 
         static int WannaBuy(ToBuy Upgrade) {
                 if (Upgrade == ToBuy.AlphaFactory) {
-                        if (Essence >= UpgradeTrack.AlphaFactoryCost) { // afford
-                                Essence -= UpgradeTrack.AlphaFactoryCost;
+                        if (EssenceWallet.Amount >= UpgradeTrack.AlphaFactoryCost) { // afford
+                                EssenceWallet.Amount -= UpgradeTrack.AlphaFactoryCost;
                                 UpgradeTrack.AlphaFactory++;
                                 return 1;
                         } else {
@@ -301,8 +295,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.BetaFactory) {
-                        if (Essence >= UpgradeTrack.BetaFactoryCost) { // afford
-                                Essence -= UpgradeTrack.BetaFactoryCost;
+                        if (EssenceWallet.Amount >= UpgradeTrack.BetaFactoryCost) { // afford
+                                EssenceWallet.Amount -= UpgradeTrack.BetaFactoryCost;
                                 UpgradeTrack.BetaFactory++;
                                 return 1;
                         } else {
@@ -311,8 +305,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.GammaFactory) {
-                        if (Essence >= UpgradeTrack.GammaFactoryCost) { // afford
-                                Essence -= UpgradeTrack.GammaFactoryCost;
+                        if (EssenceWallet.Amount >= UpgradeTrack.GammaFactoryCost) { // afford
+                                EssenceWallet.Amount -= UpgradeTrack.GammaFactoryCost;
                                 UpgradeTrack.GammaFactory++;
                                 return 1;
                         } else {
@@ -321,8 +315,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.EssenceBase) {
-                        if (ResourceWallet.AlphaAmount >= UpgradeTrack.EssenceBaseCost) {
-                                ResourceWallet.AlphaAmount -= UpgradeTrack.EssenceBaseCost;
+                        if (AlphaWallet.Amount >= UpgradeTrack.EssenceBaseCost) {
+                                AlphaWallet.Amount -= UpgradeTrack.EssenceBaseCost;
                                 UpgradeTrack.EssenceBaseBought++;
                                 return 1;
                         } else {
@@ -331,8 +325,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.EssenceMultiplier) {
-                        if (ResourceWallet.BetaAmount >= UpgradeTrack.EssenceMultiplierCost) {
-                                ResourceWallet.BetaAmount -= UpgradeTrack.EssenceMultiplierCost;
+                        if (BetaWallet.Amount >= UpgradeTrack.EssenceMultiplierCost) {
+                                BetaWallet.Amount -= UpgradeTrack.EssenceMultiplierCost;
                                 UpgradeTrack.EssenceMultiplierBought++;
                                 return 1;
                         } else {
@@ -341,8 +335,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.FactoryInputUpgrade) {
-                        if (ResourceWallet.GammaAmount >= UpgradeTrack.FactoryInputUpgradeCost) {
-                                ResourceWallet.GammaAmount -= UpgradeTrack.FactoryInputUpgradeCost;
+                        if (GammaWallet.Amount >= UpgradeTrack.FactoryInputUpgradeCost) {
+                                GammaWallet.Amount -= UpgradeTrack.FactoryInputUpgradeCost;
                                 UpgradeTrack.FactoryInputUpgradeBought++;
                                 return 1;
                         } else {
@@ -351,8 +345,8 @@ public static class Program
                 }
 
                 if (Upgrade == ToBuy.FactoryOutputUpgrade) {
-                        if (ResourceWallet.GammaAmount >= UpgradeTrack.FactoryOutputUpgradeCost) {
-                                ResourceWallet.GammaAmount -= UpgradeTrack.FactoryOutputUpgradeCost;
+                        if (GammaWallet.Amount >= UpgradeTrack.FactoryOutputUpgradeCost) {
+                                GammaWallet.Amount -= UpgradeTrack.FactoryOutputUpgradeCost;
                                 UpgradeTrack.FactoryOutputUpgradeBought++;
                                 return 1;
                         } else {
@@ -364,205 +358,34 @@ public static class Program
         }
 
         static void HandleDisplay() {
+
                 int TerminalWidth = Console.WindowWidth;
                 int TerminalHeight = Console.WindowHeight;
 
                 AnsiConsole.Clear();
 
-                // ============== Game Panel Stuff ==================== //
-
-                var GameStatPanel = new Panel(StringsStuff.GamePanelStats);
-                GameStatPanel.Width = 70;
-                GameStatPanel.Height = 16;
-                GameStatPanel.Header = new PanelHeader(" Game : Stat Menu");
-
-                // --- //
-
-                var FactoryTable = new Table();
-
-                FactoryTable.AddColumn("[white] Factory [/]"); // Make Columns (the vertical slices)
-                FactoryTable.AddColumn("[white] Amount [/]");
-                FactoryTable.AddColumn("[white] Status [/]");
-
-                FactoryTable.AddRow(
-                        "[yellow] Alpha [/]", // refer to Colums made
-                        UpgradeTrack.AlphaFactory.ToString(),
-                                    UpgradeTrack.AlphaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
-                );
-                FactoryTable.AddRow(
-                        "[blue] Beta [/]",
-                        UpgradeTrack.BetaFactory.ToString(),
-                                    UpgradeTrack.BetaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
-                );
-                FactoryTable.AddRow(
-                        "[green] Gamma [/]",
-                        UpgradeTrack.GammaFactory.ToString(),
-                                    UpgradeTrack.GammaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
-                );
-
-                FactoryTable.Border = TableBorder.Rounded;
-                FactoryTable.Width = 70;
-
-                // ================= Shop Panel Stuff ================== //
-                // Da Checks the goal is for HandleDisplay to just print shop and shop should handle itself
-                int ChosenEntry = 0;
-
-                if (GameState.MenuID == 1.1f) { // has Chosen the first one
-                        ChosenEntry = 1;
-                } else if (GameState.MenuID == 1.2f) {
-                        ChosenEntry = 2;
-                } else if (GameState.MenuID == 1.3f) {
-                        ChosenEntry = 3;
-                } else if (GameState.MenuID == 1.4f) {
-                        ChosenEntry = 4;
-                } else if (GameState.MenuID == 1.5f) {
-                        ChosenEntry = 5;
-                } else if (GameState.MenuID == 1.6f) {
-                        ChosenEntry = 6;
-                } else if (GameState.MenuID == 1.7f) {
-                        ChosenEntry = 7;
-                }else {
-                        ChosenEntry = 0;
-                }
-
-                // they dont need to care if any entry is chosen
-                if (GameState.MenuID == 999.998f) {
-                        ChosenEntry = -1; // success to buy
-                        GameState.MenuID = 1.0f;
-                } else if (GameState.MenuID == 999.997f) {
-                        ChosenEntry = -2; // fail to buy cuz cant afford
-                        GameState.MenuID = 1.0f;
-                } else if (GameState.MenuID == 999.996f) {
-                        ChosenEntry = -3; // fail to buy cuz error
-                        GameState.MenuID = 1.0f;
-                }
-
-                // ---- The UI ---- //
-                var ShopMenu = new Panel(StringsStuff.ShopMainPanel);
-
-                var ShopEntryPanel0 = new Panel(
-                        $"No entry Chosen"
-                );
-
-                var ShopErrorBuying = new Panel(
-                        $" An Error Occured! "
-                );
-
-                var ShopCanAfford = new Panel(
-                        $" Successfully Bought! "
-                );
-
-                var ShopCannotAfford = new Panel(
-                        $" Cannot Afford Factory! "
-                );
-
-                var ShopEntryPanel1 = new Panel(StringsStuff.ShopEntryPanel1);
-                var ShopEntryPanel2 = new Panel(StringsStuff.ShopEntryPanel2);
-                var ShopEntryPanel3 = new Panel(StringsStuff.ShopEntryPanel3);
-                var ShopEntryPanel4 = new Panel(StringsStuff.ShopEntryPanel4);
-                var ShopEntryPanel5 = new Panel(StringsStuff.ShopEntryPanel5);
-                var ShopEntryPanel6 = new Panel(StringsStuff.ShopEntryPanel6);
-                var ShopEntryPanel7 = new Panel(StringsStuff.ShopEntryPanel7);
-
-                ShopMenu.Header = new PanelHeader(" Shop Menu ");
-                ShopMenu.Width = 67;
-                ShopMenu.Height = 32;
-                ShopEntryPanel1.Header = new PanelHeader(" Shop Menu : Entry 1");
-                ShopEntryPanel1.Width = 71;
-                ShopEntryPanel1.Height = 16;
-                ShopEntryPanel2.Header = new PanelHeader(" Shop Menu : Entry 2");
-                ShopEntryPanel2.Width = 71;
-                ShopEntryPanel2.Height = 16;
-                ShopEntryPanel3.Header = new PanelHeader(" Shop Menu : Entry 3");
-                ShopEntryPanel3.Width = 71;
-                ShopEntryPanel3.Height = 16;
-                ShopEntryPanel4.Header = new PanelHeader(" Shop Menu : Entry 4");
-                ShopEntryPanel4.Width = 71;
-                ShopEntryPanel4.Height = 16;
-                ShopEntryPanel5.Header = new PanelHeader(" Shop Menu : Entry 5");
-                ShopEntryPanel5.Width = 71;
-                ShopEntryPanel5.Height = 16;
-                ShopEntryPanel6.Header = new PanelHeader(" Shop Menu : Entry 6");
-                ShopEntryPanel6.Width = 71;
-                ShopEntryPanel6.Height = 16;
-                ShopEntryPanel7.Header = new PanelHeader(" Shop Menu : Entry 7");
-                ShopEntryPanel7.Width = 71;
-                ShopEntryPanel7.Height = 16;
-
-                // ============== Layout shenanegans =========== //
-
-                var GameLayout = new Layout("GameRoot")
-                .SplitColumns(
-                        new Layout("GameLeft"), // 70W, 33H
-                              new Layout("GameRight").SplitRows(
-                                      new Layout("GameTopRight"), // 71W, 16H
-                                                                new Layout("GameBottomRight") // 71W, 17H
-                              )
-                );
-
-                var ShopLayout = new Layout("ShopRoot")
-                .SplitColumns(
-                        new Layout("ShopLeft"), // 68W, 32H
-                              new Layout("ShopRight").SplitRows(
-                                      new Layout("ShopTopRight"), // 69W, 16H
-                                                                new Layout("ShopBottomRight")
-                              )
-                );
-
-                GameLayout["GameTopRight"].Update(GameStatPanel);
-                GameLayout["GameBottomRight"].Update(FactoryTable);
-                ShopLayout["ShopBottomRight"].Update(GameStatPanel);
-                ShopLayout["ShopLeft"].Update(ShopMenu);
-
-                // Shop entry handles (choosing)
-                if (ChosenEntry == 1) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel1);
-                } else if (ChosenEntry == 2) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel2);
-                } else if (ChosenEntry == 3) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel3);
-                } else if (ChosenEntry == 4) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel4);
-                } else if (ChosenEntry == 5) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel5);
-                } else if (ChosenEntry == 6) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel6);
-                } else if (ChosenEntry == 7) {
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel7);
-                } else if (ChosenEntry == 0) { // Default
-                        ShopLayout["ShopTopRight"].Update(ShopEntryPanel0);
-                }
-
-                // Buy feedback
-                if (ChosenEntry == -1) { // success
-                        ShopLayout["ShopTopRight"].Update(ShopCanAfford);
-                } else if (ChosenEntry == -2) {
-                        ShopLayout["ShopTopRight"].Update(ShopCannotAfford);
-                } else if (ChosenEntry == -3) {
-                        ShopLayout["ShopTopRight"].Update(ShopErrorBuying);
-                }
-
-                // ================ Actually print it ============ //
+                var GameUi = new GameUI();
+                var ShopUi =  new ShopUI();
 
                 if (GameState.MenuID == 0.0f) {
-                        AnsiConsole.Write(GameLayout);
-                }
-
-                if (GameState.MenuID >= 1.0f) {
-                        AnsiConsole.Write(ShopLayout);
+                      GameUi.InitGameLayout();
+                } else {
+                    ShopUi.ShopMenuLayout();
                 }
 
                 if (GameState.MenuID == 999.999f) {
                         ExitSequence();
                 }
+
+
         }
 
         static void Save() {
                 var ToBeSaved = new {
-                        Alpha = ResourceWallet.AlphaAmount,
-                        Beta = ResourceWallet.BetaAmount,
-                        Gamma = ResourceWallet.GammaAmount,
-                        Essence = Essence,
+                        Alpha = AlphaWallet.Amount,
+                        Beta = BetaWallet.Amount,
+                        Gamma = GammaWallet.Amount,
+                        Essence = EssenceWallet.Amount,
 
                         AlphaFactory = UpgradeTrack.AlphaFactory,
                         BetaFactory = UpgradeTrack.BetaFactory,
@@ -608,10 +431,10 @@ public static class Program
                         var SaveData = System.Text.Json.JsonSerializer.Deserialize<dynamic>(json);
 
                         // then restore
-                        Essence = SaveData.GetProperty("Essence").GetSingle();
-                        ResourceWallet.AlphaAmount = SaveData.GetProperty("Alpha").GetSingle();
-                        ResourceWallet.BetaAmount = SaveData.GetProperty("Beta").GetSingle();
-                        ResourceWallet.GammaAmount = SaveData.GetProperty("Gamma").GetSingle();
+                        EssenceWallet.Amount = SaveData.GetProperty("Essence").GetSingle();
+                        AlphaWallet.Amount = SaveData.GetProperty("Alpha").GetSingle();
+                        BetaWallet.Amount = SaveData.GetProperty("Beta").GetSingle();
+                        GammaWallet.Amount = SaveData.GetProperty("Gamma").GetSingle();
 
                         UpgradeTrack.AlphaFactory = SaveData.GetProperty("AlphaFactory").GetInt32();
                         UpgradeTrack.BetaFactory = SaveData.GetProperty("BetaFactory").GetInt32();
@@ -647,13 +470,13 @@ public static class Program
         static void HandleInput(char Key) {
                 if (GameState.MenuID == 0.0f) { // on menu
                         if (Key == 'S') GameState.MenuID = 1.0f; // go shop
-                } else if (GameState.MenuID == 1.0f || GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f) {
+                } else if (GameState.MenuID == 1.0f || GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
                         if (Key == 'S') GameState.MenuID = 0.0f;
                 }
 
                 // ==== Shop Functions ==== //
 
-                if (GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f) { // Shop entry choosing
+                if (GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f ) { // Shop entry choosing
                         if (Key == '1') {
                                 GameState.MenuID = 1.1f;
                         } else if (Key == '2') {
@@ -672,7 +495,7 @@ public static class Program
                 }
 
                 // ShopGoBack
-                if (GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f) {
+                if (GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
                         if (Key == 'B') GameState.MenuID = 1.0f;
                 }
 
@@ -792,15 +615,214 @@ public static class Program
         }
 }
 
+public class GameUI
+{
+        public Layout InitGameLayout() {
+                var GameLayout = new Layout("GameRoot")
+                        .SplitColumns (
+                                new Layout("GameLeft").SplitRows(
+                                        new Layout("GameTopLeft"),
+                                        new Layout("GameBottomLeft")
+                                ),
+                                new Layout("GameRight").SplitRows(
+                                        new Layout("GameTopRight"),
+                                        new Layout("GameBottomRight")
+                                        )
+                                );
+
+                // GameLayout["LayoutPlace"].Update(Panel);
+                GameLayout["GameTopLeft"].Update(Panels.BuildStatPanel());
+                GameLayout["GameBottomLeft"].Update(Tables.GameBuildFactoryTable());
+                GameLayout["GameBottomRight"].Update(Tables.GameBuildUpgradeTable());
+
+                AnsiConsole.Write(GameLayout);
+                return GameLayout;
+        }
+}
+
+public class ShopUI
+{
+        public Layout ShopMenuLayout() {
+                var ShopLayout = new Layout("ShopRoot")
+                .SplitColumns(
+                        new Layout("ShopLeft"), // 68W, 32H
+                              new Layout("ShopRight").SplitRows(
+                                      new Layout("ShopTopRight"), // 69W, 16H
+                                                                new Layout("ShopBottomRight")
+                              )
+                );
+
+
+
+                ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu());
+                ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
+
+                if (GameState.MenuID >= 1.0f && GameState.MenuID < 999.888f) {
+                        int Entry = GameState.MenuID switch {
+                                1.1f => 1,
+                                1.2f => 2,
+                                1.3f => 3,
+                                1.4f => 4,
+                                1.5f => 5,
+                                1.6f => 6,
+                                1.7f => 7,
+                                _ => 0
+                        };
+
+                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(Entry));
+                }
+
+                if (GameState.MenuID == 999.998f) {
+                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(0)); // success
+                } else if (GameState.MenuID == 999.997f) {
+                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(1)); // Fail cuz broke
+                } else if (GameState.MenuID == 999.996f) {
+                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(2)); // Fail cuz broke
+                }
+
+                AnsiConsole.Write(ShopLayout);
+                return ShopLayout;
+
+        }
+
+
+}
+
+
+public static class Panels
+{
+        public static Panel BuildStatPanel() {
+                // var "PanelName" = new Panel("string to use");
+                var GameStatPanel = new Panel(StringsStuff.GamePanelStats);
+                // {PanelName}.{Attribute} = {Value};
+                GameStatPanel.Width = 70;
+                GameStatPanel.Height = 16;
+                GameStatPanel.Header = new PanelHeader(" Game : Stat Menu");
+                return GameStatPanel;
+        }
+
+        public static Panel ShopBuildEntryPanel(int panel) {
+                Panel entry = panel switch {
+                        1 => new Panel(StringsStuff.ShopEntryPanel1),
+                        2 => new Panel(StringsStuff.ShopEntryPanel2),
+                        3 => new Panel(StringsStuff.ShopEntryPanel3),
+                        4 => new Panel(StringsStuff.ShopEntryPanel4),
+                        5 => new Panel(StringsStuff.ShopEntryPanel5),
+                        6 => new Panel(StringsStuff.ShopEntryPanel6),
+                        7 => new Panel(StringsStuff.ShopEntryPanel7),
+                        _ => new Panel("No entry chosen")
+                };
+
+                entry.Width = 71;
+                entry.Height = 16;
+                entry.Header = new PanelHeader($" Shop Menu : Entry {panel}");
+
+                return entry;
+        }
+
+        public static Panel ShopBuildBuyFeedback(int result) {
+                Panel DaResult = result switch {
+                  0 => new Panel($" Successfully Bought! "),
+                  1 => new Panel($" Cannot Afford! "),
+                  2 => new Panel($" An Error Occured! "),
+                  _ => new Panel($" some dumbass used the wrong argument ")
+                };
+
+                return DaResult;
+        }
+
+        public static Panel ShopBuildShopMenu() {
+                var ShopMenu = new Panel(StringsStuff.ShopMainPanel);
+
+                ShopMenu.Header = new PanelHeader(" Shop Menu ");
+                ShopMenu.Width = 67;
+                ShopMenu.Height = 32;
+
+                return ShopMenu;
+        }
+}
+
+public static class Tables
+{
+        public static Table GameBuildFactoryTable() {
+                var FactoryTable = new Table();
+
+                FactoryTable.AddColumn("[white] Factory [/]"); // Make Columns (the vertical slices)
+                FactoryTable.AddColumn("[white] Amount [/]");
+                FactoryTable.AddColumn("[white] Status [/]");
+
+                FactoryTable.AddRow(
+                        "[yellow] Alpha [/]", // refer to Colums made
+                        UpgradeTrack.AlphaFactory.ToString(),
+                                    UpgradeTrack.AlphaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                );
+                FactoryTable.AddRow(
+                        "[blue] Beta [/]",
+                        UpgradeTrack.BetaFactory.ToString(),
+                                    UpgradeTrack.BetaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                );
+                FactoryTable.AddRow(
+                        "[green] Gamma [/]",
+                        UpgradeTrack.GammaFactory.ToString(),
+                                    UpgradeTrack.GammaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                );
+
+                FactoryTable.Border = TableBorder.Rounded;
+                FactoryTable.Width = 70;
+
+                return FactoryTable;
+
+        }
+
+        public static Table GameBuildUpgradeTable() {
+                var UpgradeTable = new Table();
+
+                // FactoryTable.AddColumn("[white] Amount [/]");
+
+                UpgradeTable.AddColumn("[white] Upgrade [/]");
+                UpgradeTable.AddColumn("[white] Bought [/]");
+                UpgradeTable.AddColumn("[white] Effects [/]");
+
+                UpgradeTable.AddRow(
+                        "[cyan]Essence[/] Base Upgrade", UpgradeTrack.EssenceBaseBought.ToString(), "Temp"
+                );
+                UpgradeTable.AddRow(
+                        "[cyan]Essence[/] Multiplier Upgrade", UpgradeTrack.EssenceMultiplierBought.ToString(), "Temp"
+                );
+                UpgradeTable.AddRow(
+                        "[purple]Factory Input Upgrade[/]", UpgradeTrack.FactoryInputUpgradeBought.ToString(), "Temp"
+                );
+                UpgradeTable.AddRow(
+                        "[purple]Factory Output Upgrade[/]", UpgradeTrack.FactoryOutputUpgradeBought.ToString(), "Temp"
+                );
+
+                UpgradeTable.Border = TableBorder.Rounded;
+                UpgradeTable.Width = 70;
+
+                return UpgradeTable;
+        }
+}
+
+
+public class ResourceBP
+{
+        public float Amount { get; set; } // get; set; tells that its readable and writable
+        public float ProductionPerTick { get; set; } // meant for +/- production
+
+        public ResourceBP(float StartAmount) { // you can call this to Make a new Resource with this characteristics/Data
+                Amount = StartAmount;
+        }
+}
+
 public static class StringsStuff
 {
         public static string GamePanelStats =>
                 $"[white][/]\n" +
-                $"[cyan]Essence : {Essence}[/]\n" +
+                $"[cyan]Essence : {EssenceWallet.Amount}[/]\n" +
                 $"[white][/]\n" +
-                $"[yellow]Alpha : {ResourceWallet.AlphaAmount}[/]\n" +
-                $"[blue]Beta : {ResourceWallet.BetaAmount}[/]\n" +
-                $"[green]Gamma : {ResourceWallet.GammaAmount}[/]\n"
+                $"[yellow]Alpha : {AlphaWallet.Amount}[/]\n" +
+                $"[blue]Beta : {BetaWallet.Amount}[/]\n" +
+                $"[green]Gamma : {GammaWallet.Amount}[/]\n"
         ;
 
         public static string ShopMainPanel =>
@@ -821,8 +843,8 @@ public static class StringsStuff
                 $"\n" +
                 $" > Factory Upgrade < \n" +
                 $"\n" +
-                $" -> Make Factory input system safer Press 6 to see \n" +
-                $" -> Make Factory Production line Smarter Press 7 to see \n"
+                $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
+                $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n"
         ;
 
         public static string ShopEntryPanel1 =>
