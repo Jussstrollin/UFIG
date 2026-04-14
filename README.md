@@ -20,7 +20,7 @@ I'd like to call these Greek letters **Arcospheres**.
 ```Bash
 sudo pacman -S dotnet-sdk-6.0
 ```
-(Higher versions may also work)
+(Higher versions will also work)
 
 ### Compile from source
 ```Bash
@@ -28,7 +28,7 @@ git clone [this-repo-link]
 cd UFIG/
 dotnet run
 ```
-### Download from release
+### Download from release ( not available for now )
 ```Bash
 cd ~/path/to/downloaded/folder
 dotnet run
@@ -37,7 +37,7 @@ dotnet run
 ## Controls
 - `S` — Go to shop
 - `Q` — Quit
-- `1-5` — Open upgrade description (in shop)
+- `1-7` — Open upgrade description (in shop)
 - `ENTER` — Buy (note: you may need to select the upgrade again before buying another)
 - `B` — Go back (from upgrade description)
 
