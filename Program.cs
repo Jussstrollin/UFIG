@@ -5,16 +5,17 @@
  * [/] Finish Shop basic functionalities
  * [/] Essence Upgrades
  * [/] Start making the early Game loop
- * [ish] Add texts, Start sequences, doialogues and stuff.
- * [ish] Finally add all shop texts
+ * [/] Add texts, Start sequences, doialogues and stuff.
+ * [/] Finally add all shop texts
  * [ish] Polish UI
  * [ish] Add EventSystem
- * [ish] Basic Price scaling as Event system
+ * [/] Basic Price scaling as Event system
+ * [] Better game pacing
  * ... Later, further here is midgame stuff, goal before? have a fun Gameloop! ...
  *
  * TODO : Add Event queue list
  *      : add random events and more forced events
- *      : get started on essence as being mined, and  time based factories
+ *      : get started on essence as being mined, and time based factories (HAlF done)
  *
  * Note : For naming, Im using Pascal Case which just means, for example "Velocity = x;" starts with capital letters, and for multiple words, each "separate" word starts with capital letters like (IsFlying = true;)
  */
@@ -154,54 +155,42 @@ public static class Program
                         DateTime now = DateTime.Now;
 
                         if (!GameState.Pause) {
-                                // if (( now - LastProgressBarsTick).TotalSeconds >= 0.10) {
-                                //         // ticks is in .10 steps, its the UI's job to handle Checks and Resets.
-                                //         if (UpgradeTrack.AlphaFactory >= 1) {
-                                //                 if (AlphaFactoryProgressIncrement <= 15) { // 1.5s
-                                //                         AlphaFactoryProgressIncrement++; // it allows 16th yes, i dont care
-                                //                 } else if (AlphaFactoryProgressIncrement > 15) {
-                                //                         AlphaFactoryProgressIncrement = 0;
-                                //                 }
-                                //         }
-                                //
-                                //         if (UpgradeTrack.BetaFactory >= 1) {
-                                //                 if (BetaFactoryProgressIncrement <= 20) { // 2.0s
-                                //                         BetaFactoryProgressIncrement++;
-                                //                 } else if (BetaFactoryProgressIncrement > 20) {
-                                //                         BetaFactoryProgressIncrement = 0;
-                                //                 }
-                                //         }
-                                //
-                                //         if (UpgradeTrack.GammaFactory >= 1) {
-                                //                 if (GammaFactoryProgressIncrement <= 30) { // 3.0s
-                                //                         GammaFactoryProgressIncrement++;
-                                //                 } else if (GammaFactoryProgressIncrement > 30) {
-                                //                         GammaFactoryProgressIncrement = 0;
-                                //                 }
-                                //         }
-                                //
-                                //         LastProgressBarsTick = now;
-                                // }
+                                if (( now - LastProgressBarsTick).TotalSeconds >= 0.10) {
+                                        // ticks is in .10 steps, its the UI's job to handle Checks and Resets.
+                                        if (AlphaFactory.InputCheck() == true) {
+                                                if (UpgradeTrack.AlphaFactory >= 1) {
+                                                        if (AlphaFactoryProgressIncrement <= 15) { // 1.5s
+                                                                AlphaFactoryProgressIncrement++; // it allows 16th yes, i dont care
+                                                        } else if (AlphaFactoryProgressIncrement > 15) {
+                                                                AlphaFactory.FactoryCalc();
+                                                                AlphaFactoryProgressIncrement = 0;
+                                                        }
+                                                }
+                                        }
 
-                                if ((now - LastAlphaFactoryTick).TotalSeconds >= 1.0) { // debug related alpha shall be 1.5s, beta be 2.0s, and Gamma be 3.0s
-                                        AlphaFactory.FactoryCalc();
-                                        PushPending();
-                                        WipePending();
-                                        LastAlphaFactoryTick = now;
-                                }
+                                        if (BetaFactory.InputCheck() == true) {
+                                                if (UpgradeTrack.BetaFactory >= 1) {
+                                                        if (BetaFactoryProgressIncrement <= 20) { // 2.0s
+                                                                BetaFactoryProgressIncrement++;
+                                                        } else if (BetaFactoryProgressIncrement > 20) {
+                                                                BetaFactory.FactoryCalc();
+                                                                BetaFactoryProgressIncrement = 0;
+                                                        }
+                                                }
+                                        }
 
-                                if ((now - LastBetaFactoryTick).TotalSeconds >= 1.0) {
-                                        BetaFactory.FactoryCalc();
-                                        PushPending();
-                                        WipePending();
-                                        LastBetaFactoryTick = now;
-                                }
+                                        if (GammaFactory.InputCheck() == true) {
+                                                if (UpgradeTrack.GammaFactory >= 1) {
+                                                        if (GammaFactoryProgressIncrement <= 30) { // 3.0s
+                                                                GammaFactoryProgressIncrement++;
+                                                        } else if (GammaFactoryProgressIncrement > 30) {
+                                                                GammaFactory.FactoryCalc();
+                                                                GammaFactoryProgressIncrement = 0;
+                                                        }
+                                                }
 
-                                if ((now - LastGammaFactoryTick).TotalSeconds >= 1.0) {
-                                        GammaFactory.FactoryCalc();
-                                        PushPending();
-                                        WipePending();
-                                        LastGammaFactoryTick = now;
+                                        }
+                                        LastProgressBarsTick = now;
                                 }
                         }
 
@@ -209,12 +198,14 @@ public static class Program
                                 if (!GameState.Pause) {
                                         HandleEvents();
                                         EssenceProduction();
+                                        PushPending();
+                                        WipePending();
                                 }
                                 PauseHandler();
                                 LastGameTick = now;
                         }
 
-                        if ((now - LastDisplayTick).TotalSeconds >= 0.5) {
+                        if ((now - LastDisplayTick).TotalSeconds >= 0.1) {
                                 HandleDisplay();
                                 LastDisplayTick = now;
 
@@ -226,6 +217,48 @@ public static class Program
 
                         Thread.Sleep(10);
                 }
+        }
+
+        public static string GetAlphaBar() {
+                if (UpgradeTrack.AlphaFactory == 0) return "";
+
+                int filled = (AlphaFactoryProgressIncrement * 10) / 15;
+                if (filled > 10) filled = 10;
+
+                string bar = "{";
+                for (int i = 0; i < filled; i++) bar += "#";
+                for (int i = filled; i < 10; i++) bar += "-";
+                bar += "}";
+
+                return bar;
+        }
+
+        public static string GetBetaBar() {
+                if (UpgradeTrack.BetaFactory == 0) return "";
+
+                int filled = (BetaFactoryProgressIncrement * 10) / 20;
+                if (filled > 10) filled = 10;
+
+                string bar = "{";
+                for (int i = 0; i < filled; i++) bar += "#";
+                for (int i = filled; i < 10; i++) bar += "-";
+                bar += "}";
+
+                return bar;
+        }
+
+        public static string GetGammaBar() {
+                if (UpgradeTrack.GammaFactory == 0) return "";
+
+                int filled = (GammaFactoryProgressIncrement * 10) / 30;
+                if (filled > 10) filled = 10;
+
+                string bar = "{";
+                for (int i = 0; i < filled; i++) bar += "#";
+                for (int i = filled; i < 10; i++) bar += "-";
+                bar += "}";
+
+                return bar;
         }
 
         static void HandleEvents() {
@@ -646,48 +679,132 @@ public class Factory
         // 10% Bonus prod per upgrade Bought
         static double BonusProduction => 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
 
+        public bool InputCheck() {
+                bool Halt = false;
+
+                if (this.Resource == Resources.Alpha) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory);
+
+                        if (ToDeduct > EssenceWallet.Amount || UpgradeTrack.AlphaFactory <= 0) {
+                                Halt = true;
+                                UpgradeTrack.AlphaFactoryStatus = false;
+                        } else {
+                                Halt = false;
+                                UpgradeTrack.AlphaFactoryStatus = true;
+                        }
+                }
+
+                if (this.Resource == Resources.Beta) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory);
+
+                        if (ToDeduct > AlphaWallet.Amount || UpgradeTrack.BetaFactory <= 0) {
+                                Halt = true;
+                                UpgradeTrack.BetaFactoryStatus = false;
+                        } else {
+                                Halt = false;
+                                UpgradeTrack.BetaFactoryStatus = true;
+                        }
+                }
+
+                if (this.Resource == Resources.Gamma) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        double ToDeduct2 = (this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        double ToDeduct3 = (this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        if (ToDeduct > EssenceWallet.Amount ||
+                                ToDeduct2 > AlphaWallet.Amount ||
+                                ToDeduct3 > BetaWallet.Amount ||
+                                UpgradeTrack.GammaFactory <= 0
+                        ) { // if any gets triggered, halt
+                                Halt = true;
+                                UpgradeTrack.GammaFactoryStatus = false;
+                        } else {
+                                Halt = false;
+                                UpgradeTrack.GammaFactoryStatus = true;
+                        }
+                }
+
+                if (Halt) {
+                        return false;
+                } else return true;
+        }
+
         public void FactoryCalc() {
                 bool Halt = true;
 
                 // Input check
                 if (this.Resource == Resources.Alpha) {
-                        if (EssenceWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory)) && UpgradeTrack.AlphaFactory >= 1) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory);
+
+                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.AlphaFactory) * BonusProduction;
+
+                        if (ToDeduct > EssenceWallet.Amount && UpgradeTrack.AlphaFactory >= 1) {
+                                Halt = true;
+                                UpgradeTrack.AlphaFactoryStatus = false;
+                        } else {
                                 Halt = false;
-                        } else Halt = true;
+                                UpgradeTrack.AlphaFactoryStatus = true;
+                        }
 
                         if (!Halt) {
                                 // Deduct
-                                Pending.Essence -= ((this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory));
+                                Pending.Essence -= ToDeduct;
                                 // Apply
-                                Pending.Alpha += ((this.OutputResourceBase * UpgradeTrack.AlphaFactory) * BonusProduction);
-                        }
+                                Pending.Alpha += ToAdd;
+                        } else return;
                 }
 
                 if (this.Resource == Resources.Beta) {
-                        if (AlphaWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory)) && UpgradeTrack.BetaFactory >= 1) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory);
+
+                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.BetaFactory) * BonusProduction;
+
+                        if (ToDeduct > AlphaWallet.Amount && UpgradeTrack.BetaFactory >= 1) {
+                                Halt = true;
+                                UpgradeTrack.BetaFactoryStatus = false;
+                        } else {
                                 Halt = false;
-                        } else Halt = true;
+                                UpgradeTrack.BetaFactoryStatus = true;
+                        }
 
                         if (!Halt) {
                                 // Deduct
-                                Pending.Alpha -= ((this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory));
+                                Pending.Alpha -= ToDeduct;
                                 // Apply
-                                Pending.Beta += ((this.OutputResourceBase * UpgradeTrack.BetaFactory) * BonusProduction);
+                                Pending.Beta += ToAdd;
                         }
                 }
 
                 if (this.Resource == Resources.Gamma) {
-                        if (EssenceWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && AlphaWallet.Amount >= ((this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && BetaWallet.Amount >= ((this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && UpgradeTrack.GammaFactory >= 1) {
+                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        double ToDeduct2 = (this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        double ToDeduct3 = (this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
+
+                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.GammaFactory) * BonusProduction;
+
+                        if (ToDeduct > EssenceWallet.Amount ||
+                            ToDeduct2 > AlphaWallet.Amount ||
+                            ToDeduct3 > BetaWallet.Amount ||
+                            UpgradeTrack.GammaFactory <= 0
+                        ) { // if any gets triggered, halt
+                                Halt = true;
+                                UpgradeTrack.GammaFactoryStatus = false;
+                        } else {
                                 Halt = false;
-                        } else Halt = true;
+                                UpgradeTrack.GammaFactoryStatus = true;
+                        }
 
                         if (!Halt) {
                                 // Deduct
-                                Pending.Essence -= ((this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
-                                Pending.Alpha -= ((this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
-                                Pending.Beta -= ((this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
+                                Pending.Essence -= ToDeduct;
+                                Pending.Alpha -= ToDeduct2;
+                                Pending.Beta -= ToDeduct3;
                                 // Apply
-                                Pending.Gamma += ((this.OutputResourceBase * UpgradeTrack.GammaFactory) * BonusProduction);
+                                Pending.Gamma += ToAdd;
                         }
                 }
 
@@ -704,6 +821,9 @@ public class Factory
                 } else if (this.Resource == Resources.Gamma && !Halt) {
                         UpgradeTrack.GammaFactoryStatus = true;
                 }
+
+                PushPending();
+                WipePending();
         }
 }
 
@@ -787,6 +907,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.AlphaEvent1);
                         EventCooldown = 0; // set to 0, 10ticks before new event can show
+                        Console.Beep();
                         return;
                 } else if (UpgradeTrack.AlphaFactory >= 30 && AlphaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
                         EventToShow = 11;
@@ -797,6 +918,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.AlphaEvent2);
                         EventCooldown = 0;
+                        Console.Beep();
                         return;
                 }
         }
@@ -810,6 +932,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.BetaEvent1);
                         EventCooldown = 0;
+                        Console.Beep();
                         return;
                 } else if (UpgradeTrack.BetaFactory >= 50 && BetaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
                         EventToShow = 21;
@@ -819,6 +942,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.BetaEvent2);
                         EventCooldown = 0;
+                        Console.Beep();
                         return;
                 }
         }
@@ -832,6 +956,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.GammaEvent1);
                         EventCooldown = 0;
+                        Console.Beep();
                         return;
                 } else if (UpgradeTrack.GammaFactory >= 30 && GammaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
                         EventToShow = 31;
@@ -841,6 +966,7 @@ public static class EventSystem
                         RandomEventCanShow = false;
                         ApplyEffect(Events.GammaEvent2);
                         EventCooldown = 0;
+                        Console.Beep();
                         return;
                 }
         }
@@ -1140,14 +1266,17 @@ public static class StringsStuff
 {
         public static string GamePanelStats =>
         $"[white][/]\n" +
-        $"[cyan]Essence : {EssenceWallet.Amount}[/]\n" +
+        $"[cyan]Essence : {EssenceWallet.Amount:F1}[/]\n" +
         $"[white][/]\n" +
-        $"[yellow]Alpha : {AlphaWallet.Amount}[/]\n" +
-        $"[blue]Beta : {BetaWallet.Amount}[/]\n" +
-        $"[green]Gamma : {GammaWallet.Amount}[/]\n" +
+        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] {GetAlphaBar()}\n" +
+        $"[blue]Beta : {BetaWallet.Amount:F1}[/] {GetBetaBar()}\n" +
+        $"[green]Gamma : {GammaWallet.Amount:F1}[/] {GetGammaBar()}\n" +
         $"\n" +
         $"\n"
         // $"Debug\n" +
+        // $"AlphaFactory : {AlphaFactoryProgressIncrement}\n" +
+        // $"BetaFactory : {BetaFactoryProgressIncrement}\n" +
+        // $"GammaFactory : {GammaFactoryProgressIncrement}\n"
         // $"Event to show : {EventSystem.EventToShow.ToString()}\n" +
         // $"Alpha Forced Event Done : {EventSystem.AlphaForcedEventDone.ToString()}\n" +
         // $"Event Incrementer : {EventIncrement.ToString()}\n" +
