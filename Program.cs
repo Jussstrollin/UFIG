@@ -34,14 +34,23 @@ public static class Program
         static DateTime LastGameTick = DateTime.Now;
         static DateTime LastDisplayTick = DateTime.Now;
         static DateTime LastEventTick = DateTime.Now;
+        static DateTime LastEssenceTick = DateTime.Now;
+        static DateTime LastAlphaFactoryTick = DateTime.Now;
+        static DateTime LastBetaFactoryTick = DateTime.Now;
+        static DateTime LastGammaFactoryTick = DateTime.Now;
+        static DateTime LastProgressBarsTick = DateTime.Now;
+
+        public static int AlphaFactoryProgressIncrement = 0;
+        public static int BetaFactoryProgressIncrement = 0;
+        public static int GammaFactoryProgressIncrement = 0;
 
         public static int EventIncrement = 0;
 
-        struct ResourceDelta {
-                public float Alpha;
-                public float Beta;
-                public float Gamma;
-                public float Essence;
+        public struct ResourceDelta {
+                public double Alpha;
+                public double Beta;
+                public double Gamma;
+                public double Essence;
         }
 
         public struct UpgradeTrackBP {
@@ -83,12 +92,16 @@ public static class Program
 
         // ============================================== //
 
-        static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
+        public static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
 
         public static ResourceBP AlphaWallet = new ResourceBP(0.0f);
         public static ResourceBP BetaWallet = new ResourceBP(0.0f);
         public static ResourceBP GammaWallet = new ResourceBP(0.0f);
         public static ResourceBP EssenceWallet = new ResourceBP(1.0f);
+
+        public static Factory AlphaFactory = new Factory(Resources.Alpha, 1.0d, 0.0d, 0.0d, 1.0d);
+        public static Factory BetaFactory = new Factory(Resources.Beta, 1.0d, 0.0d, 0.0d, 1.0d);
+        public static Factory GammaFactory = new Factory(Resources.Gamma, 2.0d, 1.0d, 1.0d, 1.0d);
 
         public static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
                 AlphaFactory = 0,
@@ -140,14 +153,64 @@ public static class Program
 
                         DateTime now = DateTime.Now;
 
-                        if ((now -LastGameTick).TotalSeconds >= 1.0) {
-                                if (!GameState.Pause) {
-                                        ProductionTick();
-                                        HandleEvents();
+                        if (!GameState.Pause) {
+                                // if (( now - LastProgressBarsTick).TotalSeconds >= 0.10) {
+                                //         // ticks is in .10 steps, its the UI's job to handle Checks and Resets.
+                                //         if (UpgradeTrack.AlphaFactory >= 1) {
+                                //                 if (AlphaFactoryProgressIncrement <= 15) { // 1.5s
+                                //                         AlphaFactoryProgressIncrement++; // it allows 16th yes, i dont care
+                                //                 } else if (AlphaFactoryProgressIncrement > 15) {
+                                //                         AlphaFactoryProgressIncrement = 0;
+                                //                 }
+                                //         }
+                                //
+                                //         if (UpgradeTrack.BetaFactory >= 1) {
+                                //                 if (BetaFactoryProgressIncrement <= 20) { // 2.0s
+                                //                         BetaFactoryProgressIncrement++;
+                                //                 } else if (BetaFactoryProgressIncrement > 20) {
+                                //                         BetaFactoryProgressIncrement = 0;
+                                //                 }
+                                //         }
+                                //
+                                //         if (UpgradeTrack.GammaFactory >= 1) {
+                                //                 if (GammaFactoryProgressIncrement <= 30) { // 3.0s
+                                //                         GammaFactoryProgressIncrement++;
+                                //                 } else if (GammaFactoryProgressIncrement > 30) {
+                                //                         GammaFactoryProgressIncrement = 0;
+                                //                 }
+                                //         }
+                                //
+                                //         LastProgressBarsTick = now;
+                                // }
+
+                                if ((now - LastAlphaFactoryTick).TotalSeconds >= 1.0) { // debug related alpha shall be 1.5s, beta be 2.0s, and Gamma be 3.0s
+                                        AlphaFactory.FactoryCalc();
+                                        PushPending();
+                                        WipePending();
+                                        LastAlphaFactoryTick = now;
                                 }
 
+                                if ((now - LastBetaFactoryTick).TotalSeconds >= 1.0) {
+                                        BetaFactory.FactoryCalc();
+                                        PushPending();
+                                        WipePending();
+                                        LastBetaFactoryTick = now;
+                                }
+
+                                if ((now - LastGammaFactoryTick).TotalSeconds >= 1.0) {
+                                        GammaFactory.FactoryCalc();
+                                        PushPending();
+                                        WipePending();
+                                        LastGammaFactoryTick = now;
+                                }
+                        }
+
+                        if ((now - LastGameTick).TotalSeconds >= 1.0) {
+                                if (!GameState.Pause) {
+                                        HandleEvents();
+                                        EssenceProduction();
+                                }
                                 PauseHandler();
-                                WipePending();
                                 LastGameTick = now;
                         }
 
@@ -183,107 +246,26 @@ public static class Program
                 }
         }
 
-        static void ColoredWrite(string text, ConsoleColor color) {
-                Console.ForegroundColor = color;
-                Console.Write(text);
-                Console.ResetColor();
-        }
-
-        static void FactoryCalc() {
-                // get and apply input Upgrades
-                float BonusInputReduction = 0.05f * UpgradeTrack.FactoryInputUpgradeBought;
-
-                // AlphaFactory Input
-                float AlphaFactoryNeedEssence = 1 - BonusInputReduction;
-
-                // BetaFactory Input
-                float BetaFactoryNeedAlpha = 1 - BonusInputReduction;
-
-                // Gamma Factory Input
-                float GammaFactoryNeedAlpha = 1 - BonusInputReduction;
-                float GammaFactoryNeedBeta = 1 - BonusInputReduction;
-                float GammaFactoryNeedEssence = 2 - BonusInputReduction;
-
-                // get and apply Output Upgrades
-                float BonusProduction = 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
-                // if 5 Upgrade 1 + 0.50 = 1.5x production, pretty strong so id reconsider 100 gamma cost to 300 or even 500
-                // will be capped at 3x production
-                // or make price scaling aggressive
-
-                float AlphaFactoryProduce = (1 * UpgradeTrack.AlphaFactory) * BonusProduction;
-                float BetaFactoryProduce = (1 * UpgradeTrack.BetaFactory) * BonusProduction;
-                float GammaFactoryProduce = (1 * UpgradeTrack.GammaFactory) * BonusProduction;
-
-                bool HaltAlphaFactory = false;
-                bool HaltBetaFactory = false;
-                bool HaltGammaFactory = false;
-
-                if (AlphaFactoryNeedEssence > EssenceWallet.Amount || UpgradeTrack.AlphaFactory == 0) HaltAlphaFactory = true;
-                if (BetaFactoryNeedAlpha > AlphaWallet.Amount || UpgradeTrack.BetaFactory == 0) HaltBetaFactory = true;
-                if (GammaFactoryNeedAlpha > AlphaWallet.Amount || GammaFactoryNeedBeta > BetaWallet.Amount || GammaFactoryNeedEssence > EssenceWallet.Amount || UpgradeTrack.GammaFactory == 0) HaltGammaFactory = true;
-
-                // Alpha Factory block
-                if (HaltAlphaFactory) {
-                        UpgradeTrack.AlphaFactoryStatus = false;
-                        // then skip the adding and subtracting
-                } else {
-                        // deduction first
-                        Pending.Essence -= AlphaFactoryNeedEssence;
-                        // then Produce
-                        Pending.Alpha += AlphaFactoryProduce;
-                        // Update status
-                        UpgradeTrack.AlphaFactoryStatus = true;
-                }
-
-                if (HaltBetaFactory) {
-                        UpgradeTrack.BetaFactoryStatus = false;
-                } else {
-                        Pending.Alpha -= BetaFactoryNeedAlpha;
-                        Pending.Beta += BetaFactoryProduce;
-                        UpgradeTrack.BetaFactoryStatus = true;
-                }
-
-                if (HaltGammaFactory) {
-                        UpgradeTrack.GammaFactoryStatus = false;
-                } else {
-                        Pending.Essence -= GammaFactoryNeedEssence;
-                        Pending.Alpha -= GammaFactoryNeedAlpha;
-                        Pending.Beta -= GammaFactoryNeedBeta;
-
-                        Pending.Gamma += GammaFactoryProduce;
-                        UpgradeTrack.GammaFactoryStatus = true;
-                }
-
-                return;
-        }
-
-        static void PushPending() {
+        public static void PushPending() {
                 AlphaWallet.Amount += Pending.Alpha;
                 BetaWallet.Amount += Pending.Beta;
                 GammaWallet.Amount += Pending.Gamma;
                 EssenceWallet.Amount += Pending.Essence;
         }
 
-        static void WipePending() {
+        public static void WipePending() {
                 Pending.Alpha = 0;
                 Pending.Beta = 0;
                 Pending.Gamma = 0;
                 Pending.Essence = 0;
         }
 
-        static void ProductionTick() { // where Factory, essence and eveery production will be called
+        static void EssenceProduction() { // where Factory, essence and eveery production will be called
                 // Source Material always first
                 float EssenceBase = 1.0f * UpgradeTrack.EssenceBaseBought;
                 float EssenceMultiplier = 1.0f * UpgradeTrack.EssenceMultiplierBought;
                 float EssenceGain = EssenceBase * EssenceMultiplier;
                 Pending.Essence += EssenceGain;
-
-                // Factories
-                FactoryCalc();
-
-                // Production calculation to actualy be added
-                PushPending();
-
         }
 
         enum ToBuy {
@@ -377,15 +359,13 @@ public static class Program
                 int TerminalWidth = Console.WindowWidth;
                 int TerminalHeight = Console.WindowHeight;
 
-                AnsiConsole.Clear();
-
                 var GameUi = new GameUI();
                 var ShopUi =  new ShopUI();
 
                 if (GameState.MenuID == 0.0f) {
-                      GameUi.InitGameLayout();
+                        AnsiConsole.Write(GameUi.InitGameLayout());
                 } else {
-                    ShopUi.ShopMenuLayout();
+                        AnsiConsole.Write(ShopUi.ShopMenuLayout());
                 }
 
                 if (GameState.MenuID == 999.999f) {
@@ -638,6 +618,95 @@ public static class Program
         }
 }
 
+public enum Resources {
+        Essence,
+        Alpha,
+        Beta,
+        Gamma
+}
+
+public class Factory
+{
+        public Resources Resource { get; set; }
+        public double Input1ResourceBase { get; set; } // like 1 for 1 Essence per tick
+        public double Input2ResourceBase { get; set; }
+        public double Input3ResourceBase { get; set; }
+        public double OutputResourceBase { get; set; }
+
+        public Factory(Resources Resource, double Input1ResourceBase, double Input2ResourceBase, double Input3ResourceBase, double OutputResourceBase) {
+                this.Resource = Resource;
+                this.Input1ResourceBase = Input1ResourceBase;
+                this.Input2ResourceBase = Input2ResourceBase;
+                this.Input3ResourceBase = Input3ResourceBase;
+                this.OutputResourceBase = OutputResourceBase;
+        }
+
+        // 5% Input reduction per upgrades boguht
+        static double BonusInputReduction => 0.05f * UpgradeTrack.FactoryInputUpgradeBought;
+        // 10% Bonus prod per upgrade Bought
+        static double BonusProduction => 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
+
+        public void FactoryCalc() {
+                bool Halt = true;
+
+                // Input check
+                if (this.Resource == Resources.Alpha) {
+                        if (EssenceWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory)) && UpgradeTrack.AlphaFactory >= 1) {
+                                Halt = false;
+                        } else Halt = true;
+
+                        if (!Halt) {
+                                // Deduct
+                                Pending.Essence -= ((this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory));
+                                // Apply
+                                Pending.Alpha += ((this.OutputResourceBase * UpgradeTrack.AlphaFactory) * BonusProduction);
+                        }
+                }
+
+                if (this.Resource == Resources.Beta) {
+                        if (AlphaWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory)) && UpgradeTrack.BetaFactory >= 1) {
+                                Halt = false;
+                        } else Halt = true;
+
+                        if (!Halt) {
+                                // Deduct
+                                Pending.Alpha -= ((this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory));
+                                // Apply
+                                Pending.Beta += ((this.OutputResourceBase * UpgradeTrack.BetaFactory) * BonusProduction);
+                        }
+                }
+
+                if (this.Resource == Resources.Gamma) {
+                        if (EssenceWallet.Amount >= ((this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && AlphaWallet.Amount >= ((this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && BetaWallet.Amount >= ((this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory)) && UpgradeTrack.GammaFactory >= 1) {
+                                Halt = false;
+                        } else Halt = true;
+
+                        if (!Halt) {
+                                // Deduct
+                                Pending.Essence -= ((this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
+                                Pending.Alpha -= ((this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
+                                Pending.Beta -= ((this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory));
+                                // Apply
+                                Pending.Gamma += ((this.OutputResourceBase * UpgradeTrack.GammaFactory) * BonusProduction);
+                        }
+                }
+
+                if (this.Resource == Resources.Alpha && Halt) {
+                        UpgradeTrack.AlphaFactoryStatus = false;
+                } else if (this.Resource == Resources.Alpha && !Halt) {
+                        UpgradeTrack.AlphaFactoryStatus = true;
+                } else if (this.Resource == Resources.Beta && Halt) {
+                        UpgradeTrack.BetaFactoryStatus = false;
+                } else if (this.Resource == Resources.Beta && !Halt) {
+                        UpgradeTrack.BetaFactoryStatus = true;
+                } else if (this.Resource == Resources.Gamma && Halt) {
+                        UpgradeTrack.GammaFactoryStatus = false;
+                } else if (this.Resource == Resources.Gamma && !Halt) {
+                        UpgradeTrack.GammaFactoryStatus = true;
+                }
+        }
+}
+
 public static class EventSystem
 {
         public static int EventToShow = 0; // for panel control, 1x is reserved for Alpha. 2x for beta, 3x for Gamma, and 1-9 for essence, 50 Above is for random events
@@ -787,16 +856,16 @@ public class GameUI
 {
         public Layout InitGameLayout() {
                 var GameLayout = new Layout("GameRoot")
-                        .SplitColumns (
-                                new Layout("GameLeft").SplitRows(
-                                        new Layout("GameTopLeft"),
-                                        new Layout("GameBottomLeft")
-                                ),
-                                new Layout("GameRight").SplitRows(
-                                        new Layout("GameTopRight"),
-                                        new Layout("GameBottomRight")
-                                        )
-                                );
+                .SplitColumns (
+                        new Layout("GameLeft").SplitRows(
+                                new Layout("GameTopLeft"),
+                                                         new Layout("GameBottomLeft")
+                        ),
+                        new Layout("GameRight").SplitRows(
+                                new Layout("GameTopRight"),
+                                                          new Layout("GameBottomRight")
+                        )
+                );
 
                 // GameLayout["LayoutPlace"].Update(Panel);
                 GameLayout["GameTopLeft"].Update(Panels.BuildStatPanel());
@@ -820,7 +889,6 @@ public class GameUI
                         GameLayout["GameTopRight"].Update(Panels.EmptyEvent());
                 }
 
-                AnsiConsole.Write(GameLayout);
                 return GameLayout;
         }
 }
@@ -865,7 +933,6 @@ public class ShopUI
                         ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(2)); // Fail cuz broke
                 }
 
-                AnsiConsole.Write(ShopLayout);
                 return ShopLayout;
 
         }
@@ -907,10 +974,10 @@ public static class Panels
 
         public static Panel ShopBuildBuyFeedback(int result) {
                 Panel DaResult = result switch {
-                  0 => new Panel($" Successfully Bought! "),
-                  1 => new Panel($" Cannot Afford! "),
-                  2 => new Panel($" An Error Occured! "),
-                  _ => new Panel($" some dumbass used the wrong argument ")
+                        0 => new Panel($" Successfully Bought! "),
+                        1 => new Panel($" Cannot Afford! "),
+                        2 => new Panel($" An Error Occured! "),
+                        _ => new Panel($" some dumbass used the wrong argument ")
                 };
 
                 return DaResult;
@@ -1072,140 +1139,140 @@ public class ResourceBP
 public static class StringsStuff
 {
         public static string GamePanelStats =>
-                $"[white][/]\n" +
-                $"[cyan]Essence : {EssenceWallet.Amount}[/]\n" +
-                $"[white][/]\n" +
-                $"[yellow]Alpha : {AlphaWallet.Amount}[/]\n" +
-                $"[blue]Beta : {BetaWallet.Amount}[/]\n" +
-                $"[green]Gamma : {GammaWallet.Amount}[/]\n" +
-                $"\n" +
-                $"\n"
-                // $"Debug\n" +
-                // $"Event to show : {EventSystem.EventToShow.ToString()}\n" +
-                // $"Alpha Forced Event Done : {EventSystem.AlphaForcedEventDone.ToString()}\n" +
-                // $"Event Incrementer : {EventIncrement.ToString()}\n" +
-                // $"Can Show : {EventSystem.CanShowEvent.ToString()}\n" +
-                // $"ForcedEventWantToShow : {EventSystem.ForcedEventWantToShow.ToString()}\n"
+        $"[white][/]\n" +
+        $"[cyan]Essence : {EssenceWallet.Amount}[/]\n" +
+        $"[white][/]\n" +
+        $"[yellow]Alpha : {AlphaWallet.Amount}[/]\n" +
+        $"[blue]Beta : {BetaWallet.Amount}[/]\n" +
+        $"[green]Gamma : {GammaWallet.Amount}[/]\n" +
+        $"\n" +
+        $"\n"
+        // $"Debug\n" +
+        // $"Event to show : {EventSystem.EventToShow.ToString()}\n" +
+        // $"Alpha Forced Event Done : {EventSystem.AlphaForcedEventDone.ToString()}\n" +
+        // $"Event Incrementer : {EventIncrement.ToString()}\n" +
+        // $"Can Show : {EventSystem.CanShowEvent.ToString()}\n" +
+        // $"ForcedEventWantToShow : {EventSystem.ForcedEventWantToShow.ToString()}\n"
         ;
 
         public static string ShopMainPanel =>
-                $"Here, you can Buy more Factories, Essence Upgrades (and Factory upgrades in the future).\n" +
-                $"\n" +
-                $"\n" +
-                $" > Factories < \n" +
-                $"  -> [yellow] Alpha Factory [/] Press 1 to see\n" +
-                $"  -> [blue] Beta Factory [/] Press 2 to see\n" +
-                $"  -> [green] Gamma Factory [/] Press 3 to see\n" +
-                $"\n" +
-                $"\n" +
-                $" > [blue]Essence[/] Upgrades < \n" +
-                $"\n" +
-                $" -> [cyan]Essence Base Production[/] Press 4 to see\n" +
-                $" -> [cyan]Essence Multiplier[/] Press 5 to see\n" +
-                $"\n" +
-                $"\n" +
-                $" > Factory Upgrade < \n" +
-                $"\n" +
-                $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
-                $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n"
+        $"Here, you can Buy more Factories, Essence Upgrades (and Factory upgrades in the future).\n" +
+        $"\n" +
+        $"\n" +
+        $" > Factories < \n" +
+        $"  -> [yellow] Alpha Factory [/] Press 1 to see\n" +
+        $"  -> [blue] Beta Factory [/] Press 2 to see\n" +
+        $"  -> [green] Gamma Factory [/] Press 3 to see\n" +
+        $"\n" +
+        $"\n" +
+        $" > [blue]Essence[/] Upgrades < \n" +
+        $"\n" +
+        $" -> [cyan]Essence Base Production[/] Press 4 to see\n" +
+        $" -> [cyan]Essence Multiplier[/] Press 5 to see\n" +
+        $"\n" +
+        $"\n" +
+        $" > Factory Upgrade < \n" +
+        $"\n" +
+        $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
+        $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n"
         ;
 
         public static string ShopEntryPanel1 =>
-                $"[yellow] Alpha Factory [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - A factory that Consumes [cyan]1 Essence[/] to produce [yellow]1 Alpha[/] Per tick.\n" +
-                $"\n" +
-                $"Cost : [cyan]{UpgradeTrack.AlphaFactoryCost}[/]\n" +
-                $"" +
-                $"You currently have : [yellow]{UpgradeTrack.AlphaFactory}[/] Factories\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[yellow] Alpha Factory [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - A factory that Consumes [cyan]1 Essence[/] to produce [yellow]1 Alpha[/] Per tick.\n" +
+        $"\n" +
+        $"Cost : [cyan]{UpgradeTrack.AlphaFactoryCost}[/]\n" +
+        $"" +
+        $"You currently have : [yellow]{UpgradeTrack.AlphaFactory}[/] Factories\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel2 =>
-                $"[blue] Beta Factory [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - A factory that Consumes [yellow]1 Alpha[/] to produce [blue]1 Beta[/] Per tick.\n" +
-                $"\n" +
-                $"Cost : [cyan]{UpgradeTrack.BetaFactoryCost}[/]\n" +
-                $"" +
-                $"You currently have : [blue]{UpgradeTrack.BetaFactory}[/] Factories\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[blue] Beta Factory [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - A factory that Consumes [yellow]1 Alpha[/] to produce [blue]1 Beta[/] Per tick.\n" +
+        $"\n" +
+        $"Cost : [cyan]{UpgradeTrack.BetaFactoryCost}[/]\n" +
+        $"" +
+        $"You currently have : [blue]{UpgradeTrack.BetaFactory}[/] Factories\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel3 =>
-                $"[green] Gamma Factory [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - A factory that Consumes [yellow]1 Alpha[/] and [blue]1 Beta [/]to produce [green]1 Gamma[/] Per tick.\n" +
-                $"\n" +
-                $"Cost : [cyan]{UpgradeTrack.GammaFactoryCost}[/]\n" +
-                $"" +
-                $"You currently have : [green]{UpgradeTrack.GammaFactory}[/] Factories\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[green] Gamma Factory [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - A factory that Consumes [yellow]1 Alpha[/] and [blue]1 Beta [/]to produce [green]1 Gamma[/] Per tick.\n" +
+        $"\n" +
+        $"Cost : [cyan]{UpgradeTrack.GammaFactoryCost}[/]\n" +
+        $"" +
+        $"You currently have : [green]{UpgradeTrack.GammaFactory}[/] Factories\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel4 =>
-                $"[cyan] Essence Base Production [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - [cyan]Essence[/] Is produced at the rate of Base multiplied by a Multiplier ( E = Base*multiplier ), buying this adds +1 Essence per tick times {UpgradeTrack.EssenceMultiplierBought}\n" +
-                $"\n" +
-                $"Cost : [yellow]{UpgradeTrack.EssenceBaseCost} Alpha[/]\n" +
-                $"" +
-                $"You currently have : [cyan]{UpgradeTrack.EssenceBaseBought} Base Essence Production[/]\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[cyan] Essence Base Production [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - [cyan]Essence[/] Is produced at the rate of Base multiplied by a Multiplier ( E = Base*multiplier ), buying this adds +1 Essence per tick times {UpgradeTrack.EssenceMultiplierBought}\n" +
+        $"\n" +
+        $"Cost : [yellow]{UpgradeTrack.EssenceBaseCost} Alpha[/]\n" +
+        $"" +
+        $"You currently have : [cyan]{UpgradeTrack.EssenceBaseBought} Base Essence Production[/]\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel5 =>
-                $"[cyan] Essence Multiplier [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - Adds A Multiplier for [cyan]Essence[/] Production\n" +
-                $"\n" +
-                $"Cost : [blue]{UpgradeTrack.EssenceMultiplierCost} Beta[/]\n" +
-                $"" +
-                $"You currently have : [cyan]{UpgradeTrack.EssenceMultiplierBought} Essence Multiplier[/]\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[cyan] Essence Multiplier [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - Adds A Multiplier for [cyan]Essence[/] Production\n" +
+        $"\n" +
+        $"Cost : [blue]{UpgradeTrack.EssenceMultiplierCost} Beta[/]\n" +
+        $"" +
+        $"You currently have : [cyan]{UpgradeTrack.EssenceMultiplierBought} Essence Multiplier[/]\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel6 =>
-                $"[purple] Factory Input mechanism [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - Improving the Input Mechanism of all Factory, improving and reducing needed Resource input by 5%\n" +
-                $"\n" +
-                $"Cost : [green]{UpgradeTrack.FactoryInputUpgradeCost} Gamma[/]\n" +
-                $"" +
-                $"You currently have : [white]{UpgradeTrack.FactoryInputUpgradeBought} Upgrades Bought[/]\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[purple] Factory Input mechanism [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - Improving the Input Mechanism of all Factory, improving and reducing needed Resource input by 5%\n" +
+        $"\n" +
+        $"Cost : [green]{UpgradeTrack.FactoryInputUpgradeCost} Gamma[/]\n" +
+        $"" +
+        $"You currently have : [white]{UpgradeTrack.FactoryInputUpgradeBought} Upgrades Bought[/]\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ShopEntryPanel7 =>
-                $"[purple] Factory Line Performance Optimisation [/]\n" +
-                $"\n" +
-                $"Description : \n" +
-                $" - Improving the Factory Line to gain ~10% Output for the same Input some said 'why are we using an inefficient one in the first place?' \n" +
-                $"\n" +
-                $"Cost : [green]{UpgradeTrack.FactoryOutputUpgradeCost} Gamma[/]\n" +
-                $"" +
-                $"You currently have : [white]{UpgradeTrack.FactoryOutputUpgradeBought} Upgrades Bought[/]\n" +
-                $"\n" +
-                $"Press ENTER to Purchase\n" +
-                $"Press B to Go back\n"
+        $"[purple] Factory Line Performance Optimisation [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - Improving the Factory Line to gain ~10% Output for the same Input some said 'why are we using an inefficient one in the first place?' \n" +
+        $"\n" +
+        $"Cost : [green]{UpgradeTrack.FactoryOutputUpgradeCost} Gamma[/]\n" +
+        $"" +
+        $"You currently have : [white]{UpgradeTrack.FactoryOutputUpgradeBought} Upgrades Bought[/]\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
         ;
 
         public static string ForcedAlphaEvent1 =>
@@ -1251,6 +1318,6 @@ public static class StringsStuff
         ;
 
         public static string EmptyEvent =>
-                $"No event has happened yet."
+        $"No event has happened yet."
         ;
 }
