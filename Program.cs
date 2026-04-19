@@ -46,6 +46,8 @@ public static class Program
         public static int BetaFactoryProgressIncrement = 0;
         public static int GammaFactoryProgressIncrement = 0;
 
+        public static int EssenceMinerProgressIncrement = 0;
+
         public static int EventIncrement = 0;
 
         public struct ResourceDelta {
@@ -57,6 +59,8 @@ public static class Program
 
         public struct UpgradeTrackBP {
                 // Factory Cost is by default Essence
+                public int EssenceMiner;
+                public int EssenceMinerCost;
 
                 public int AlphaFactory;
                 public bool AlphaFactoryStatus;
@@ -107,6 +111,9 @@ public static class Program
         public static Factory GammaFactory = new Factory(Resources.Gamma, 2.0d, 1.0d, 1.0d, 1.0d);
 
         public static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
+                EssenceMiner = 1,
+                EssenceMinerCost = 10,
+
                 AlphaFactory = 0,
                 BetaFactory = 0,
                 GammaFactory = 0,
@@ -161,9 +168,9 @@ public static class Program
                                         // ticks is in .10 steps, its the UI's job to handle Checks and Resets.
                                         if (AlphaFactory.InputCheck() == true) {
                                                 if (UpgradeTrack.AlphaFactory >= 1) {
-                                                        if (AlphaFactoryProgressIncrement <= 15) { // 1.5s
+                                                        if (AlphaFactoryProgressIncrement <= 20) { // 2.0s
                                                                 AlphaFactoryProgressIncrement++; // it allows 16th yes, i dont care
-                                                        } else if (AlphaFactoryProgressIncrement > 15) {
+                                                        } else if (AlphaFactoryProgressIncrement > 20) {
                                                                 AlphaFactory.FactoryCalc();
                                                                 AlphaFactoryProgressIncrement = 0;
                                                         }
@@ -172,9 +179,9 @@ public static class Program
 
                                         if (BetaFactory.InputCheck() == true) {
                                                 if (UpgradeTrack.BetaFactory >= 1) {
-                                                        if (BetaFactoryProgressIncrement <= 20) { // 2.0s
+                                                        if (BetaFactoryProgressIncrement <= 50) { // 5.0s
                                                                 BetaFactoryProgressIncrement++;
-                                                        } else if (BetaFactoryProgressIncrement > 20) {
+                                                        } else if (BetaFactoryProgressIncrement > 50) {
                                                                 BetaFactory.FactoryCalc();
                                                                 BetaFactoryProgressIncrement = 0;
                                                         }
@@ -183,15 +190,23 @@ public static class Program
 
                                         if (GammaFactory.InputCheck() == true) {
                                                 if (UpgradeTrack.GammaFactory >= 1) {
-                                                        if (GammaFactoryProgressIncrement <= 30) { // 3.0s
+                                                        if (GammaFactoryProgressIncrement <= 80) { // 8.0s
                                                                 GammaFactoryProgressIncrement++;
-                                                        } else if (GammaFactoryProgressIncrement > 30) {
+                                                        } else if (GammaFactoryProgressIncrement > 80) {
                                                                 GammaFactory.FactoryCalc();
                                                                 GammaFactoryProgressIncrement = 0;
                                                         }
                                                 }
 
                                         }
+
+                                        if (EssenceMinerProgressIncrement <= 30) {
+                                                EssenceMinerProgressIncrement++;
+                                        } else if (EssenceMinerProgressIncrement > 30) {
+                                                EssenceProduction();
+                                                EssenceMinerProgressIncrement = 0;
+                                        }
+
                                         LastProgressBarsTick = now;
                                 }
                         }
@@ -199,10 +214,8 @@ public static class Program
                         if ((now - LastGameTick).TotalSeconds >= 1.0) {
                                 if (!GameState.Pause) {
                                         HandleEvents();
-                                        EssenceProduction();
                                         PushPending();
                                         WipeNetProd();
-                                        WipePending();
                                 }
                                 PauseHandler();
                                 LastGameTick = now;
@@ -225,12 +238,12 @@ public static class Program
         public static string GetAlphaBar() {
                 if (UpgradeTrack.AlphaFactory == 0) return "";
 
-                int filled = (AlphaFactoryProgressIncrement * 10) / 15;
+                int filled = (AlphaFactoryProgressIncrement * 10) / 20;
                 if (filled > 10) filled = 10;
 
                 string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "#";
-                for (int i = filled; i < 10; i++) bar += "-";
+                for (int i = 0; i < filled; i++) bar += "█";
+                for (int i = filled; i < 10; i++) bar += "▒";
                 bar += "}";
 
                 return bar;
@@ -239,12 +252,12 @@ public static class Program
         public static string GetBetaBar() {
                 if (UpgradeTrack.BetaFactory == 0) return "";
 
-                int filled = (BetaFactoryProgressIncrement * 10) / 20;
+                int filled = (BetaFactoryProgressIncrement * 10) / 50;
                 if (filled > 10) filled = 10;
 
                 string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "#";
-                for (int i = filled; i < 10; i++) bar += "-";
+                for (int i = 0; i < filled; i++) bar += "█";
+                for (int i = filled; i < 10; i++) bar += "▒";
                 bar += "}";
 
                 return bar;
@@ -253,12 +266,24 @@ public static class Program
         public static string GetGammaBar() {
                 if (UpgradeTrack.GammaFactory == 0) return "";
 
-                int filled = (GammaFactoryProgressIncrement * 10) / 30;
+                int filled = (GammaFactoryProgressIncrement * 10) / 80;
                 if (filled > 10) filled = 10;
 
                 string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "#";
-                for (int i = filled; i < 10; i++) bar += "-";
+                for (int i = 0; i < filled; i++) bar += "█";
+                for (int i = filled; i < 10; i++) bar += "▒";
+                bar += "}";
+
+                return bar;
+        }
+
+        public static string GetEssenceBar() {
+                int filled = (EssenceMinerProgressIncrement * 10) / 30;
+                if (filled > 10) filled = 10;
+
+                string bar = "{";
+                for (int i = 0; i < filled; i++) bar += "█";
+                for (int i = filled; i < 10; i++) bar += "▒";
                 bar += "}";
 
                 return bar;
@@ -307,11 +332,17 @@ public static class Program
                 // Source Material always first
                 float EssenceBase = 1.0f * UpgradeTrack.EssenceBaseBought;
                 float EssenceMultiplier = 1.0f * UpgradeTrack.EssenceMultiplierBought;
-                float EssenceGain = EssenceBase * EssenceMultiplier;
+                float EssenceGain = (EssenceBase * EssenceMultiplier) * UpgradeTrack.EssenceMiner;
                 Pending.Essence += EssenceGain;
+                NetProd.Essence += EssenceGain;
+
+                PushPending();
+                WipePending();
         }
 
         enum ToBuy {
+                EssenceMiner,
+
                 AlphaFactory,
                 BetaFactory,
                 GammaFactory,
@@ -324,6 +355,16 @@ public static class Program
         }
 
         static int WannaBuy(ToBuy Upgrade) {
+                if (Upgrade == ToBuy.EssenceMiner) {
+                        if (AlphaWallet.Amount >= UpgradeTrack.EssenceMinerCost) {
+                                AlphaWallet.Amount -= UpgradeTrack.EssenceMinerCost;
+                                UpgradeTrack.EssenceMiner++;
+                                return 1;
+                        } else {
+                                return 0;
+                        }
+                }
+
                 if (Upgrade == ToBuy.AlphaFactory) {
                         if (EssenceWallet.Amount >= UpgradeTrack.AlphaFactoryCost) { // afford
                                 EssenceWallet.Amount -= UpgradeTrack.AlphaFactoryCost;
@@ -516,13 +557,13 @@ public static class Program
         static void HandleInput(char Key) {
                 if (GameState.MenuID == 0.0f) { // on menu
                         if (Key == 'S') GameState.MenuID = 1.0f; // go shop
-                } else if (GameState.MenuID == 1.0f || GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
+                } else if (GameState.MenuID == 1.0f || GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
                         if (Key == 'S') GameState.MenuID = 0.0f;
                 }
 
                 // ==== Shop Functions ==== //
 
-                if (GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f ) { // Shop entry choosing
+                if (GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f ||GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f ) { // Shop entry choosing
                         if (Key == '1') {
                                 GameState.MenuID = 1.1f;
                         } else if (Key == '2') {
@@ -537,11 +578,13 @@ public static class Program
                                 GameState.MenuID = 1.6f;
                         } else if (Key == '7') {
                                 GameState.MenuID = 1.7f;
+                        } else if (Key == '8') {
+                                GameState.MenuID = 1.8f;
                         }
                 }
 
                 // ShopGoBack
-                if (GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
+                if (GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
                         if (Key == 'B') GameState.MenuID = 1.0f;
                 }
 
@@ -633,6 +676,20 @@ public static class Program
                 if (GameState.MenuID == 1.7f) { // GammaFactoryPage
                         if (Key == '\r') { // wanabuy
                                 int result = WannaBuy(ToBuy.FactoryOutputUpgrade);
+
+                                if (result == 1) {
+                                        GameState.MenuID = 999.998f; // Successfull
+                                } else if (result == 0) {
+                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                } else if (result == -1) {
+                                        GameState.MenuID = 999.996f; // fail by error
+                                }
+                        }
+                }
+
+                if (GameState.MenuID == 1.8f) {
+                        if (Key == '\r') { // wanabuy
+                                int result = WannaBuy(ToBuy.EssenceMiner);
 
                                 if (result == 1) {
                                         GameState.MenuID = 999.998f; // Successfull
@@ -1066,6 +1123,7 @@ public class ShopUI
                                 1.5f => 5,
                                 1.6f => 6,
                                 1.7f => 7,
+                                1.8f => 8,
                                 _ => 0
                         };
 
@@ -1109,6 +1167,7 @@ public static class Panels
                         5 => new Panel(StringsStuff.ShopEntryPanel5),
                         6 => new Panel(StringsStuff.ShopEntryPanel6),
                         7 => new Panel(StringsStuff.ShopEntryPanel7),
+                        8 => new Panel(StringsStuff.ShopEntryPanel8),
                         _ => new Panel("No entry chosen")
                 };
 
@@ -1287,11 +1346,11 @@ public static class StringsStuff
 {
         public static string GamePanelStats =>
         $"[white][/]\n" +
-        $"[cyan]Essence : {EssenceWallet.Amount:F1}[/]\n" +
+        $"[cyan]Essence : {EssenceWallet.Amount:F1}[/] | {NetProd.Essence.ToString("F2")} / sec | [cyan]{GetEssenceBar()}[/]\n" +
         $"[white][/]\n" +
-        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] | {NetProd.Alpha.ToString()} / sec |  {GetAlphaBar()}\n" +
-        $"[blue]Beta : {BetaWallet.Amount:F1}[/] | {NetProd.Beta.ToString()} / sec | {GetBetaBar()}\n" +
-        $"[green]Gamma : {GammaWallet.Amount:F1}[/] | {NetProd.Gamma.ToString()} / sec | {GetGammaBar()}\n" +
+        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] | {NetProd.Alpha.ToString("F2")} / sec |  [yellow]{GetAlphaBar()}[/]\n" +
+        $"[blue]Beta : {BetaWallet.Amount:F1}[/] | {NetProd.Beta.ToString("F2")} / sec | [blue]{GetBetaBar()}[/]\n" +
+        $"[green]Gamma : {GammaWallet.Amount:F1}[/] | {NetProd.Gamma.ToString("F2")} / sec | [green]{GetGammaBar()}[/]\n" +
         $"\n" +
         $"\n"
         // $"Debug\n" +
@@ -1324,7 +1383,12 @@ public static class StringsStuff
         $" > Factory Upgrade < \n" +
         $"\n" +
         $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
-        $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n"
+        $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n" +
+        $"\n" +
+        $"\n" +
+        $" > Miners < \n" +
+        $"\n" +
+        $" -> [cyan] Essence Miner [/] Press 8 to see \n "
         ;
 
         public static string ShopEntryPanel1 =>
@@ -1420,6 +1484,20 @@ public static class StringsStuff
         $"Cost : [green]{UpgradeTrack.FactoryOutputUpgradeCost} Gamma[/]\n" +
         $"" +
         $"You currently have : [white]{UpgradeTrack.FactoryOutputUpgradeBought} Upgrades Bought[/]\n" +
+        $"\n" +
+        $"Press ENTER to Purchase\n" +
+        $"Press B to Go back\n"
+        ;
+
+        public static string ShopEntryPanel8 =>
+        $"[cyan] Essence Miner [/]\n" +
+        $"\n" +
+        $"Description : \n" +
+        $" - An Essence Miner, To mine the Mysterious Material [cyan]'Essence'[/], said to have an unknown origin, but is the Base Material in Synthesizing Alpha.\n" +
+        $"\n" +
+        $"Cost : [yellow]{UpgradeTrack.EssenceMinerCost} Alpha[/]\n" +
+        $"" +
+        $"You currently have : [cyan]{UpgradeTrack.EssenceMiner} Miners Bought[/]\n" +
         $"\n" +
         $"Press ENTER to Purchase\n" +
         $"Press B to Go back\n"
