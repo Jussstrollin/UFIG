@@ -11,11 +11,11 @@
  * [ish] Add EventSystem
  * [/] Basic Price scaling as Event system
  * [] Better game pacing
+ * [/] get started on essence as being mined, and time based factories
  * ... Later, further here is midgame stuff, goal before? have a fun Gameloop! ...
  *
  * TODO : Add Event queue list
  *      : add random events and more forced events
- *      : get started on essence as being mined, and time based factories (HAlF done)
  *
  * Note : For naming, Im using Pascal Case which just means, for example "Velocity = x;" starts with capital letters, and for multiple words, each "separate" word starts with capital letters like (IsFlying = true;)
  */
@@ -89,7 +89,7 @@ public static class Program
         }
 
         public struct GameStateBP {
-                public float MenuID;
+                public Menu MenuID;
                 public int Progress;
 
                 public bool Pause;
@@ -142,8 +142,25 @@ public static class Program
                 FactoryOutputUpgradeCost = 100 // gamma
         };
 
+        public enum Menu {
+                Game,
+                ShopNoEntry,
+                ShopEntry1,
+                ShopEntry2,
+                ShopEntry3,
+                ShopEntry4,
+                ShopEntry5,
+                ShopEntry6,
+                ShopEntry7,
+                ShopEntry8,
+                ShopFeedBackSuccess,
+                ShopFeedBackRejected,
+                ShopFeedBackFailByError,
+                ExitMenu
+        }
+
         public static GameStateBP GameState = new GameStateBP {
-                MenuID = 0.0f,
+                MenuID = Menu.Game,
                 Progress = 0,
                 Pause = false,
                 Stop = false
@@ -300,7 +317,7 @@ public static class Program
         }
 
         static void PauseHandler() {
-                if (GameState.MenuID >= 1.0f) { // anything greater than 0.9 is in shop
+                if (GameState.MenuID != Menu.Game) { // anywhere not in GameMenu, means to pause
                         GameState.Pause = true;
                 } else {
                         GameState.Pause = false;
@@ -452,7 +469,7 @@ public static class Program
                         AnsiConsole.Write(ShopUi.ShopMenuLayout());
                 }
 
-                if (GameState.MenuID == 999.999f) {
+                if (GameState.MenuID == Menu.ExitMenu) {
                         ExitSequence();
                 }
 
@@ -548,155 +565,175 @@ public static class Program
         static void ExitSequence() {
                 AnsiConsole.Clear();
 
-                if (GameState.MenuID == 999.999f) {
-                        AnsiConsole.MarkupLine("Are you sure to Quit? [red]Y[/] / [green]N[/] ( will be saved )");
+                if (GameState.MenuID == Menu.ExitMenu) {
+                        AnsiConsole.MarkupLine("Are you sure to Quit? [red]Y[/] / [green]N[/] ( a save will be made )");
                 }
 
         }
 
         static void HandleInput(char Key) {
-                if (GameState.MenuID == 0.0f) { // on menu
-                        if (Key == 'S') GameState.MenuID = 1.0f; // go shop
-                } else if (GameState.MenuID == 1.0f || GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
-                        if (Key == 'S') GameState.MenuID = 0.0f;
+                bool IsInGame = true; // default values
+                bool IsInShop = false;
+                bool IsInExit = false;
+
+                if (GameState.MenuID == Menu.Game) {
+                        IsInGame = true;
+                        IsInShop = false;
+                        IsInExit = false;
+                } else if (GameState.MenuID != Menu.Game && GameState.MenuID != Menu.ExitMenu) {
+                        IsInGame = false;
+                        IsInShop = true;
+                        IsInExit = false;
+                } else if (GameState.MenuID == Menu.ExitMenu) {
+                        IsInGame = false;
+                        IsInShop = false;
+                        IsInExit = true;
+                } else {
+                        AnsiConsole.WriteLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how yo got here");
+                }
+
+                if (IsInGame) { // on menu
+                        if (Key == 'S') GameState.MenuID = Menu.ShopNoEntry; // go shop
+                } else if (IsInShop) { // vice-versa
+                        if (Key == 'S') GameState.MenuID = Menu.Game;
                 }
 
                 // ==== Shop Functions ==== //
 
-                if (GameState.MenuID == 1.0f || GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f ||GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f ) { // Shop entry choosing
+                if (IsInShop) { // Shop entry choosing
                         if (Key == '1') {
-                                GameState.MenuID = 1.1f;
+                                GameState.MenuID = Menu.ShopEntry1;
                         } else if (Key == '2') {
-                                GameState.MenuID = 1.2f;
+                                GameState.MenuID = Menu.ShopEntry2;
                         } else if (Key == '3') {
-                                GameState.MenuID = 1.3f;
+                                GameState.MenuID = Menu.ShopEntry3;
                         } else if (Key == '4') {
-                                GameState.MenuID = 1.4f;
+                                GameState.MenuID = Menu.ShopEntry4;
                         } else if (Key == '5') {
-                                GameState.MenuID = 1.5f;
+                                GameState.MenuID = Menu.ShopEntry5;
                         } else if (Key == '6') {
-                                GameState.MenuID = 1.6f;
+                                GameState.MenuID = Menu.ShopEntry6;
                         } else if (Key == '7') {
-                                GameState.MenuID = 1.7f;
+                                GameState.MenuID = Menu.ShopEntry7;
                         } else if (Key == '8') {
-                                GameState.MenuID = 1.8f;
+                                GameState.MenuID = Menu.ShopEntry8;
                         }
                 }
 
                 // ShopGoBack
-                if (GameState.MenuID == 1.1f || GameState.MenuID == 1.2f || GameState.MenuID == 1.3f || GameState.MenuID == 1.4f || GameState.MenuID == 1.5f || GameState.MenuID == 1.6f || GameState.MenuID == 1.7f || GameState.MenuID == 1.8f || GameState.MenuID == 999.996f || GameState.MenuID == 999.997f || GameState.MenuID == 999.998f) {
-                        if (Key == 'B') GameState.MenuID = 1.0f;
+                if (IsInShop) {
+                        if (Key == 'B') GameState.MenuID = Menu.ShopNoEntry;
                 }
 
                 // Shop Buy and Feedbacks
-                if (GameState.MenuID == 1.1f) { // AlphaFactoryPage
+                if (GameState.MenuID == Menu.ShopEntry1) { // AlphaFactoryPage
                         if (Key == '\r') { // wanabuy
                                 int result = WannaBuy(ToBuy.AlphaFactory);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess; // Successfull
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected; // fail by cant afford
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError; // fail by error
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.2f) { // BetaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry2) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.BetaFactory);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.3f) { // GammaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry3) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.GammaFactory);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.4f) { // GammaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry4) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.EssenceBase);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.5f) { // GammaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry5) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.EssenceMultiplier);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.6f) { // GammaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry6) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.FactoryInputUpgrade);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.7f) { // GammaFactoryPage
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry7) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.FactoryOutputUpgrade);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
 
-                if (GameState.MenuID == 1.8f) {
-                        if (Key == '\r') { // wanabuy
+                if (GameState.MenuID == Menu.ShopEntry8) {
+                        if (Key == '\r') {
                                 int result = WannaBuy(ToBuy.EssenceMiner);
 
                                 if (result == 1) {
-                                        GameState.MenuID = 999.998f; // Successfull
+                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
                                 } else if (result == 0) {
-                                        GameState.MenuID = 999.997f; // fail by cant afford
+                                        GameState.MenuID = Menu.ShopFeedBackRejected;
                                 } else if (result == -1) {
-                                        GameState.MenuID = 999.996f; // fail by error
+                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
                                 }
                         }
                 }
@@ -705,15 +742,15 @@ public static class Program
 
                 if (Key == 'Q' || Key == 'q') {
                         GameState.Pause = true;
-                        GameState.MenuID = 999.999f;
+                        GameState.MenuID = Menu.ExitMenu;
                 } // Available Everywhere
 
-                if (GameState.MenuID == 999.999f && Key == 'Y') {
+                if (GameState.MenuID == Menu.ExitMenu && Key == 'Y') {
                         Save();
                         GameState.Stop = true;
-                } else if (GameState.MenuID == 999.999f && Key == 'N') {
+                } else if (GameState.MenuID == Menu.ExitMenu && Key == 'N') {
                         GameState.Stop = false;
-                        GameState.MenuID = 0.0f;
+                        GameState.MenuID = Menu.Game;
                 }
         }
 }
@@ -1114,27 +1151,27 @@ public class ShopUI
                 ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu());
                 ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
 
-                if (GameState.MenuID >= 1.0f && GameState.MenuID < 999.888f) {
+                if (GameState.MenuID != Menu.Game && GameState.MenuID != Menu.ExitMenu) {
                         int Entry = GameState.MenuID switch {
-                                1.1f => 1,
-                                1.2f => 2,
-                                1.3f => 3,
-                                1.4f => 4,
-                                1.5f => 5,
-                                1.6f => 6,
-                                1.7f => 7,
-                                1.8f => 8,
+                                Menu.ShopEntry1 => 1,
+                                Menu.ShopEntry2 => 2,
+                                Menu.ShopEntry3 => 3,
+                                Menu.ShopEntry4 => 4,
+                                Menu.ShopEntry5 => 5,
+                                Menu.ShopEntry6 => 6,
+                                Menu.ShopEntry7 => 7,
+                                Menu.ShopEntry8 => 8,
                                 _ => 0
                         };
 
                         ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(Entry));
                 }
 
-                if (GameState.MenuID == 999.998f) {
+                if (GameState.MenuID == Menu.ShopFeedBackSuccess) {
                         ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(0)); // success
-                } else if (GameState.MenuID == 999.997f) {
+                } else if (GameState.MenuID == Menu.ShopFeedBackRejected) {
                         ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(1)); // Fail cuz broke
-                } else if (GameState.MenuID == 999.996f) {
+                } else if (GameState.MenuID == Menu.ShopFeedBackFailByError) {
                         ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(2)); // Fail cuz broke
                 }
 
