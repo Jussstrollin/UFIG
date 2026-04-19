@@ -35,6 +35,7 @@ public static class Program
         static DateTime LastGameTick = DateTime.Now;
         static DateTime LastDisplayTick = DateTime.Now;
         static DateTime LastEventTick = DateTime.Now;
+
         static DateTime LastEssenceTick = DateTime.Now;
         static DateTime LastAlphaFactoryTick = DateTime.Now;
         static DateTime LastBetaFactoryTick = DateTime.Now;
@@ -93,6 +94,7 @@ public static class Program
 
         // ============================================== //
 
+        public static ResourceDelta NetProd = new ResourceDelta();
         public static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
 
         public static ResourceBP AlphaWallet = new ResourceBP(0.0f);
@@ -199,6 +201,7 @@ public static class Program
                                         HandleEvents();
                                         EssenceProduction();
                                         PushPending();
+                                        WipeNetProd();
                                         WipePending();
                                 }
                                 PauseHandler();
@@ -277,6 +280,13 @@ public static class Program
                 } else {
                         GameState.Pause = false;
                 }
+        }
+
+        public static void WipeNetProd() {
+                NetProd.Alpha = 0;
+                NetProd.Beta = 0;
+                NetProd.Gamma = 0;
+                NetProd.Essence = 0;
         }
 
         public static void PushPending() {
@@ -753,6 +763,9 @@ public class Factory
                                 Pending.Essence -= ToDeduct;
                                 // Apply
                                 Pending.Alpha += ToAdd;
+
+                                NetProd.Essence -= ToDeduct;
+                                NetProd.Alpha += ToAdd;
                         } else return;
                 }
 
@@ -774,6 +787,9 @@ public class Factory
                                 Pending.Alpha -= ToDeduct;
                                 // Apply
                                 Pending.Beta += ToAdd;
+
+                                NetProd.Alpha -= ToDeduct;
+                                NetProd.Beta += ToAdd;
                         }
                 }
 
@@ -805,6 +821,11 @@ public class Factory
                                 Pending.Beta -= ToDeduct3;
                                 // Apply
                                 Pending.Gamma += ToAdd;
+
+                                NetProd.Essence -= ToDeduct;
+                                NetProd.Alpha -= ToDeduct2;
+                                NetProd.Beta -= ToDeduct3;
+                                NetProd.Gamma += ToAdd;
                         }
                 }
 
@@ -1268,9 +1289,9 @@ public static class StringsStuff
         $"[white][/]\n" +
         $"[cyan]Essence : {EssenceWallet.Amount:F1}[/]\n" +
         $"[white][/]\n" +
-        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] {GetAlphaBar()}\n" +
-        $"[blue]Beta : {BetaWallet.Amount:F1}[/] {GetBetaBar()}\n" +
-        $"[green]Gamma : {GammaWallet.Amount:F1}[/] {GetGammaBar()}\n" +
+        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] | {NetProd.Alpha.ToString()} / sec |  {GetAlphaBar()}\n" +
+        $"[blue]Beta : {BetaWallet.Amount:F1}[/] | {NetProd.Beta.ToString()} / sec | {GetBetaBar()}\n" +
+        $"[green]Gamma : {GammaWallet.Amount:F1}[/] | {NetProd.Gamma.ToString()} / sec | {GetGammaBar()}\n" +
         $"\n" +
         $"\n"
         // $"Debug\n" +
