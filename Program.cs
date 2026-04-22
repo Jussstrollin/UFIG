@@ -1,4 +1,6 @@
-﻿/*
+﻿namespace UFIG;
+
+/*
  * [/] AlphaFactoryCalculations
  * [/] BetaFactoryCalc
  * [/] GammaFactoryCalc
@@ -23,12 +25,11 @@
 
 
 using System;
-using System.IO;
 using System.Text.Json;
 using Spectre.Console;
+
 using static Program;
-using static StringsStuff;
-using static EventSystem;
+using static FactoryStuff;
 
 
 public static class Program
@@ -106,6 +107,20 @@ public static class Program
                 public bool IsLanded;
         }
 
+        public struct FuelsBP {
+                public  double Percentage; // Pls be kind and make all things that add to cap it to 1.0, or not, I dont care [AS]
+                public  FuelType FuelType;
+                public  double CostToMake; // in essence, think of essence as fluid and its accompanying arcosphere in the recipe is container material
+        };
+
+        public struct RecipeBP {
+                public string Name;
+                public Resources[] ResourceNeeded;
+                public double[] NeededPerResource;
+                public FuelType[] OutputFuel;
+                public double OutputAmount;
+        };
+
         // ============================================== //
 
         public static ResourceDelta NetProd = new ResourceDelta();
@@ -154,6 +169,29 @@ public static class Program
                 FactoryOutputUpgradeCost = 100 // gamma
         };
 
+        public static GameStateBP GameState = new GameStateBP {
+                MenuID = Menu.Game,
+                Progress = 0,
+                Pause = false,
+                Stop = false,
+                PlanetOn = Planet.Origo, // Default starting Planet and states
+                IsOrbiting = false,
+                IsLanded = true
+        };
+
+        public static FuelsBP PlayerLowTierFuel = new FuelsBP {
+                Percentage = 0.0,
+                FuelType = FuelType.LowTierFuel,
+                CostToMake = 100
+        };
+
+        public static RecipeBP LowTierFuelRecipe = new RecipeBP {
+                Name = "LowTierFuel",
+                ResourceNeeded = new Resources[] { Resources.Essence, Resources.Alpha },
+                OutputFuel = new FuelType[] {FuelType.LowTierFuel},
+                OutputAmount = 0.01
+        };
+
         public enum Menu { // NOTE : ALWAYS BE **EXPLICIT** TO SET THE INT VALUE FOR EACH
                 // any submenu from Game will be from 0-99
                 Game = 0,
@@ -189,15 +227,18 @@ public static class Program
                 Sterelis
         }
 
-        public static GameStateBP GameState = new GameStateBP {
-                MenuID = Menu.Game,
-                Progress = 0,
-                Pause = false,
-                Stop = false,
-                PlanetOn = Planet.Origo, // Default starting Planet and states
-                IsOrbiting = false,
-                IsLanded = true
-        };
+        public enum FuelType {
+                LowTierFuel,
+                MediumTierFuel,
+                HighTierFuel
+        }
+
+        public enum Resources {
+                Essence,
+                Alpha,
+                Beta,
+                Gamma
+        }
 
         static void Main() {
                 Console.Clear();
@@ -572,62 +613,52 @@ public static class Program
         }
 
         static void Load() {
-                bool found;
-
-                if (System.IO.File.Exists("Save.json")) {
-                        found = true;
-                } else {
-                        found = false;
+                if (!System.IO.File.Exists("Save.json")) {
+                        AnsiConsole.Clear();
+                        AnsiConsole.Status()
+                        .Start("Finding Save files...", ctx => {
+                                Thread.Sleep(2000);
+                        });
+                        AnsiConsole.MarkupLine("[red]Nothing found[/]... Starting a new Game");
+                        Thread.Sleep(1000);
+                        return;
                 }
 
                 AnsiConsole.Clear();
-
                 AnsiConsole.Status()
                 .Start("Finding Save files...", ctx => {
                         Thread.Sleep(2000);
                 });
 
-                if (found) {
-                        AnsiConsole.MarkupLine("Found... Loading save");
+                AnsiConsole.MarkupLine("Found... Loading save");
+                Thread.Sleep(1000);
 
-                        Thread.Sleep(1000);
+                string json = System.IO.File.ReadAllText("Save.json");
 
-                        // Read then parse to json
-                        string json = System.IO.File.ReadAllText("Save.json");
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
 
-                        // Deserialize from json to object, the var thingy
-                        var SaveData = System.Text.Json.JsonSerializer.Deserialize<dynamic>(json);
+                EssenceWallet.Amount = root.GetProperty("Essence").GetDouble();
+                AlphaWallet.Amount = root.GetProperty("Alpha").GetDouble();
+                BetaWallet.Amount = root.GetProperty("Beta").GetDouble();
+                GammaWallet.Amount = root.GetProperty("Gamma").GetDouble();
 
-                        // then restore
-                        EssenceWallet.Amount = SaveData.GetProperty("Essence").GetSingle();
-                        AlphaWallet.Amount = SaveData.GetProperty("Alpha").GetSingle();
-                        BetaWallet.Amount = SaveData.GetProperty("Beta").GetSingle();
-                        GammaWallet.Amount = SaveData.GetProperty("Gamma").GetSingle();
+                UpgradeTrack.AlphaFactory = root.GetProperty("AlphaFactory").GetInt32();
+                UpgradeTrack.BetaFactory = root.GetProperty("BetaFactory").GetInt32();
+                UpgradeTrack.GammaFactory = root.GetProperty("GammaFactory").GetInt32();
 
-                        UpgradeTrack.AlphaFactory = SaveData.GetProperty("AlphaFactory").GetInt32();
-                        UpgradeTrack.BetaFactory = SaveData.GetProperty("BetaFactory").GetInt32();
-                        UpgradeTrack.GammaFactory = SaveData.GetProperty("GammaFactory").GetInt32();
+                UpgradeTrack.EssenceBaseBought = root.GetProperty("EssenceBase").GetInt32();
+                UpgradeTrack.EssenceMultiplierBought = root.GetProperty("EssenceMultiplier").GetInt32();
 
-                        UpgradeTrack.EssenceBaseBought = SaveData.GetProperty("EssenceBase").GetInt32();
-                        UpgradeTrack.EssenceMultiplierBought = SaveData.GetProperty("EssenceMultiplier").GetInt32();
+                UpgradeTrack.FactoryInputUpgradeBought = root.GetProperty("FactoryInputUpgrade").GetInt32();
+                UpgradeTrack.FactoryOutputUpgradeBought = root.GetProperty("FactoryOutputUpgrade").GetInt32();
 
-                        UpgradeTrack.FactoryInputUpgradeBought = SaveData.GetProperty("FactoryInputUpgrade").GetInt32();
-                        UpgradeTrack.FactoryOutputUpgradeBought = SaveData.GetProperty("FactoryOutputUpgrade").GetInt32();
+                EventSystem.AlphaForcedEventDone = root.GetProperty("AlphaForcedEventDone").GetInt32();
+                EventSystem.BetaForcedEventDone = root.GetProperty("BetaForcedEventDone").GetInt32();
+                EventSystem.GammaForcedEventDone = root.GetProperty("GammaForcedEventDone").GetInt32();
 
-                        EventSystem.AlphaForcedEventDone = SaveData.GetProperty("AlphaForcedEventDone").GetInt32();
-                        EventSystem.BetaForcedEventDone = SaveData.GetProperty("BetaForcedEventDone").GetInt32();
-                        EventSystem.GammaForcedEventDone = SaveData.GetProperty("GammaForcedEventDone").GetInt32();
-
-                        AnsiConsole.MarkupLine("[green]Done![/]");
-                        Thread.Sleep(500);
-                        return;
-                } else {
-                        AnsiConsole.MarkupLine("[red]Nothing found[/]... Starting a new Game");
-
-                        Thread.Sleep(1000);
-
-                        return; // just return, base is already set
-                }
+                AnsiConsole.MarkupLine("[green]Done![/]");
+                Thread.Sleep(500);
         }
 
         static void ExitSequence() {
@@ -666,7 +697,7 @@ public static class Program
                         IsInExit = false;
                         IsInPlanetaryMap = true;
                 } else {
-                        AnsiConsole.WriteLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how you got here");
+                        AnsiConsole.MarkupLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how you got here");
                 }
 
                 if (IsInGame || IsInShop || IsInPlanetaryMap) {
@@ -768,835 +799,6 @@ public static class Program
         }
 }
 
-public enum Resources {
-        Essence,
-        Alpha,
-        Beta,
-        Gamma
-}
-
-public class FactoryStuff
-{
-        public Resources Resource { get; set; }
-        public string HaltReason { get; private set; } = ""; // a defualt value so C# wont cry bout it
-
-        public FactoryStuff(Resources Resource) {
-                this.Resource = Resource;
-        }
-
-        // 5% Input reduction per upgrades boguht
-        static double BonusInputReduction => 0.05f * UpgradeTrack.FactoryInputUpgradeBought;
-        // 10% Bonus prod per upgrade Bought
-        static double BonusProduction => 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
-
-        bool FactoryHalted = true;
-
-        private (Resources[] InputTypes, double[] InputAmount) GetInputRequirements() { // takes Base Resources
-                return this.Resource switch {
-                        Resources.Alpha => (
-                                new Resources[] { Resources.Essence },
-                                new double[] { 5.0d }
-                        ),
-                        Resources.Beta => (
-                                new Resources[] { Resources.Essence, Resources.Alpha },
-                                new double[] { 15.0d, 10.0d }
-                        ),
-                        Resources.Gamma => (
-                                new Resources[] { Resources.Essence, Resources.Alpha, Resources.Beta },
-                                new double[] { 30.0d, 20.0d, 15.0d}
-                        ),
-                        _ => (new Resources[] {}, new double[] {})
-                };
-        }
-
-        // LookUp what this Factory Produces
-        private (Resources OutputResource, double OutputAmount) GetOutputs() {
-                return this.Resource switch { // what factor this is and Output then how many
-                        Resources.Alpha => (Resources.Alpha, 1.0d),
-                        Resources.Beta => (Resources.Beta, 1.0d),
-                        Resources.Gamma => (Resources.Gamma, 1.0d),
-                        _ => (Resources.Essence, 0.0d)
-                };
-        }
-
-        // LookUp what Resource we have or rather, the user have. Based on the crap we need
-        private double GetResourceAmount(Resources Resource) {
-                return Resource switch {
-                        Resources.Essence => EssenceWallet.Amount,
-                        Resources.Alpha => AlphaWallet.Amount,
-                        Resources.Beta => BetaWallet.Amount,
-                        Resources.Gamma => GammaWallet.Amount,
-                        _ => 0.0d
-                };
-        }
-
-        private int GetFactoryCount(Resources Resource) {
-                return Resource switch {
-                        Resources.Alpha => UpgradeTrack.AlphaFactory,
-                        Resources.Beta => UpgradeTrack.BetaFactory,
-                        Resources.Gamma => UpgradeTrack.GammaFactory,
-                        _ => 0
-                };
-        }
-
-        // Return False if Failed, and true if otherwise
-        public bool InputCheck() {
-                int FactoryAmount = GetFactoryCount(this.Resource);
-                if (FactoryAmount <= 0) {
-                        this.HaltReason = $"[gray]No Factory have been Purchased[/]";
-
-                        return false;
-                }
-
-                var (InputTypes, InputAmount) = GetInputRequirements();
-
-                for (int i = 0; i < InputTypes.Length; i++) {
-                        double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
-                        double Available = GetResourceAmount(InputTypes[i]);
-
-                        if (Needed > Available) {
-                                this.HaltReason = $"[red] Waiting for {InputTypes[i]}[/]";
-                                return false;
-                        }
-                }
-
-                return true;
-        }
-
-        public bool RunFactory() {
-                if (InputCheck()) {
-                        int FactoryAmount = GetFactoryCount(this.Resource);
-                        var (InputTypes, InputAmount) = GetInputRequirements();
-                        var (OutputResource, OutputAmount) = GetOutputs();
-
-                        // Deduct inputs (no planet bonus here, input cost is fixed)
-                        for (int i = 0; i < InputTypes.Length; i++) {
-                                double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
-
-                                // Deduct from pending based on resource type
-                                switch (InputTypes[i]) {
-                                        case Resources.Essence:
-                                                Pending.Essence -= Needed;
-                                                NetProd.Essence -= Needed;
-                                                break;
-                                        case Resources.Alpha:
-                                                Pending.Alpha -= Needed;
-                                                NetProd.Alpha -= Needed;
-                                                break;
-                                        case Resources.Beta:
-                                                Pending.Beta -= Needed;
-                                                NetProd.Beta -= Needed;
-                                                break;
-                                        case Resources.Gamma:
-                                                Pending.Gamma -= Needed;
-                                                NetProd.Gamma -= Needed;
-                                                break;
-                                }
-                        }
-
-                        // Calculate output with planet bonus AND production bonus
-                        double ToAdd = (OutputAmount * FactoryAmount) * BonusProduction * (1.0d + PlanetFactoryBonus);
-
-                        // Add output to pending
-                        switch (OutputResource) {
-                                case Resources.Alpha:
-                                        Pending.Alpha += ToAdd;
-                                        NetProd.Alpha += ToAdd;
-                                        break;
-                                case Resources.Beta:
-                                        Pending.Beta += ToAdd;
-                                        NetProd.Beta += ToAdd;
-                                        break;
-                                case Resources.Gamma:
-                                        Pending.Gamma += ToAdd;
-                                        NetProd.Gamma += ToAdd;
-                                        break;
-                        }
-
-                        // Push and wipe in same function
-                        PushPending();
-                        WipePending();
-                        return true;
-                }
-                return false;
-        }
-}
-
-public static class EventSystem
-{
-        public static int EventToShow = 0; // for panel control, 1x is reserved for Alpha. 2x for beta, 3x for Gamma, and 1-9 for essence, 50 Above is for random events
-        public static int EssenceForcedEventDone = 0; // up to 9
-        public static int AlphaForcedEventDone = 0;
-        public static int BetaForcedEventDone = 0;
-        public static int GammaForcedEventDone = 0;
-        public static bool CanShowEvent = true; // whether x sec from last event has passed
-        public static bool ForcedEventWantToShow = false; // so forced event always take precidence
-        public static bool RandomEventCanShow = false;
-
-        private enum Events {
-                AlphaForcedEvent,
-                BetaForcedEvent,
-                GammaForcedEvent,
-
-                // the rest is W.I.P
-                AlphaEventPos,
-                AlphaEventNeg,
-                BetaEventPos,
-                BetaEventNeg,
-                GammaEventPos,
-                GammaEventNeg,
-        }
-
-        private static void ApplyEffect(Events Do) {
-                if (Do == Events.AlphaForcedEvent) {
-                        if (AlphaForcedEventDone == 0) {
-                                UpgradeTrack.AlphaFactoryCost = UpgradeTrack.AlphaFactoryBaseCost * 2; // 100%
-                        } else if (AlphaForcedEventDone == 1) {
-                                 UpgradeTrack.AlphaFactoryCost = (UpgradeTrack.AlphaFactoryBaseCost * 2.0) * 1.80; // 80%
-                        } else if (AlphaForcedEventDone == 2) {
-                                UpgradeTrack.AlphaFactoryCost = (UpgradeTrack.AlphaFactoryBaseCost * 2.0) * 2.30; // 130%
-                        } else if (AlphaForcedEventDone == 3) {
-                                UpgradeTrack.AlphaFactoryCost = (UpgradeTrack.AlphaFactoryBaseCost * 2.0) * 1.50; // 50%
-                        }
-                } else if (Do == Events.BetaForcedEvent) {
-                        if (BetaForcedEventDone == 0) {
-                                UpgradeTrack.BetaFactoryCost = UpgradeTrack.BetaFactoryBaseCost * 2.50; // 150%
-                        } else  if (BetaForcedEventDone == 1) {
-                                UpgradeTrack.BetaFactoryCost = (UpgradeTrack.BetaFactoryBaseCost * 2.50) * 1.80; // 80%
-                        } else  if (BetaForcedEventDone == 2) {
-                                UpgradeTrack.BetaFactoryCost = (UpgradeTrack.BetaFactoryBaseCost * 2.50) * 1.40; // 40%
-                        } else  if (BetaForcedEventDone == 3) {
-                                UpgradeTrack.BetaFactoryCost = (UpgradeTrack.BetaFactoryBaseCost * 2.50) * 2.50; // 150%
-                        }
-                } else if (Do == Events.GammaForcedEvent) {
-                        if (GammaForcedEventDone == 0) {
-                                 UpgradeTrack.GammaFactoryCost = UpgradeTrack.GammaFactoryBaseCost * 2.30; // 130%
-                        } else  if (GammaForcedEventDone == 1) {
-                                 UpgradeTrack.GammaFactoryCost = (UpgradeTrack.GammaFactoryBaseCost * 2.30) * 1.90; // 90%
-                        } else  if (GammaForcedEventDone == 2) {
-                                 UpgradeTrack.GammaFactoryCost = (UpgradeTrack.GammaFactoryBaseCost * 2.30) * 1.60; // 60%
-                        } else  if (GammaForcedEventDone == 3) {
-                                 UpgradeTrack.GammaFactoryCost = (UpgradeTrack.GammaFactoryBaseCost * 2.30) * 2.0; // 100%
-                        }
-                } else return;
-
-                // Hardcoded but kinda better looking
-        }
-
-        private static int EventCooldown = 0;
-
-        public static void RefreshEvent() {
-                if (ForcedEventWantToShow == true && CanShowEvent == false) {
-                        EventCooldown++;
-                        // increment cooldown when
-                        if (EventCooldown >= 10) {
-                                ForcedEventWantToShow = false;
-                                EventCooldown = 0;
-                                CanShowEvent = true;
-                                RandomEventCanShow = true;
-                        }
-                }
-        }
-
-        public static void ForcedAlphaEventHandler() {
-                if (UpgradeTrack.AlphaFactory >= 10 && AlphaForcedEventDone == 0 && CanShowEvent && ForcedEventWantToShow == false) { // checks Current factory amount, whether this has been done, and if it can show events, and other ForcedEvents doesnt wanna show
-                        EventToShow = 10; // what Panel to use
-                        ApplyEffect(Events.AlphaForcedEvent);
-                        AlphaForcedEventDone = 1; // adds so next AlphaForcedEvent can just skip this
-
-                        // after specifying what event to show, and updating progress, declare that forced event wants to show, and reset even timer to zero
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false; // stops other from showing events
-                        RandomEventCanShow = false;
-                        EventCooldown = 0; // set to 0, 10ticks before new event can show
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.AlphaFactory >= 30 && AlphaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 11;
-                        ApplyEffect(Events.AlphaForcedEvent);
-                        AlphaForcedEventDone = 2;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.AlphaFactory >= 60 && AlphaForcedEventDone == 2 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 12;
-                        ApplyEffect(Events.AlphaForcedEvent);
-                        AlphaForcedEventDone = 3;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.AlphaFactory >= 200 && AlphaForcedEventDone == 3 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 13;
-                        ApplyEffect(Events.AlphaForcedEvent);
-                        AlphaForcedEventDone = 4;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                }
-        }
-
-
-        public static void ForcedBetaEventHandler() {
-                if (UpgradeTrack.BetaFactory >= 20 && BetaForcedEventDone == 0 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 20;
-                        ApplyEffect(Events.BetaForcedEvent);
-                        BetaForcedEventDone = 1;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.BetaFactory >= 50 && BetaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 21;
-                        ApplyEffect(Events.BetaForcedEvent);
-                        BetaForcedEventDone = 2;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                }  else if (UpgradeTrack.BetaFactory >= 80 && BetaForcedEventDone == 2 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 22;
-                        ApplyEffect(Events.BetaForcedEvent);
-                        BetaForcedEventDone = 3;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.BetaFactory >= 150 && BetaForcedEventDone == 3 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 23;
-                        ApplyEffect(Events.BetaForcedEvent);
-                        BetaForcedEventDone = 4;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                }
-        }
-
-        public static void ForcedGammaEventHandler() {
-                if (UpgradeTrack.GammaFactory >= 10 && GammaForcedEventDone == 0 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 30;
-                        ApplyEffect(Events.GammaForcedEvent);
-                        GammaForcedEventDone = 1;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.GammaFactory >= 30 && GammaForcedEventDone == 1 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 31;
-                        ApplyEffect(Events.GammaForcedEvent);
-                        GammaForcedEventDone = 2;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.GammaFactory >= 60 && GammaForcedEventDone == 2 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 32;
-                        ApplyEffect(Events.GammaForcedEvent);
-                        GammaForcedEventDone = 3;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                } else if (UpgradeTrack.GammaFactory >= 100 && GammaForcedEventDone == 3 && CanShowEvent && ForcedEventWantToShow == false) {
-                        EventToShow = 33;
-                        ApplyEffect(Events.GammaForcedEvent);
-                        GammaForcedEventDone = 4;
-                        ForcedEventWantToShow = true;
-                        CanShowEvent = false;
-                        RandomEventCanShow = false;
-                        EventCooldown = 0;
-                        Console.Beep();
-                        return;
-                }
-        }
-
-        public static void RandomEventHandler() {
-                // TODO : make the random chance event thingy here
-                return;
-        }
-        // flow : on Program or wherever this will get called on, call it first to refresh then forced event, then Random
-}
-
-public class GameUI
-{
-        public Layout InitGameLayout() {
-                var GameLayout = new Layout("GameRoot")
-                .SplitColumns (
-                        new Layout("GameLeft").SplitRows(
-                                new Layout("GameTopLeft"),
-                                                         new Layout("GameBottomLeft")
-                        ),
-                        new Layout("GameRight").SplitRows(
-                                new Layout("GameTopRight"),
-                                                          new Layout("GameBottomRight")
-                        )
-                );
-
-                // GameLayout["LayoutPlace"].Update(Panel);
-                GameLayout["GameTopLeft"].Update(Panels.BuildStatPanel());
-                GameLayout["GameBottomLeft"].Update(Tables.GameBuildFactoryTable());
-                GameLayout["GameBottomRight"].Update(Tables.GameBuildUpgradeTable());
-
-                int EventToShow = EventSystem.EventToShow;
-                if (EventToShow == 10) { // no need for Checks, even system already handles the line
-                        GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent1());
-                } else if (EventToShow == 11) {
-                        GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent2());
-                } else if (EventToShow == 12) {
-                        GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent3());
-                } else if (EventToShow == 13) {
-                        GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent4());
-                } else if (EventToShow == 20) {
-                        GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent1());
-                } else if (EventToShow == 21) {
-                        GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent2());
-                } else if (EventToShow == 22) {
-                        GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent3());
-                } else if (EventToShow == 23) {
-                        GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent4());
-                } else if (EventToShow == 30) {
-                        GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent1());
-                } else if (EventToShow == 31) {
-                        GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent2());
-                } else if (EventToShow == 32) {
-                        GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent3());
-                } else if (EventToShow == 33) {
-                        GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent4());
-                } else {
-                        GameLayout["GameTopRight"].Update(Panels.EmptyEvent());
-                }
-
-                return GameLayout;
-        }
-}
-
-public class ShopUI
-{
-        public Layout ShopMenuLayout() {
-                var ShopLayout = new Layout("ShopRoot")
-                .SplitColumns(
-                        new Layout("ShopLeft"), // 68W, 32H
-                              new Layout("ShopRight").SplitRows(
-                                      new Layout("ShopTopRight"), // 69W, 16H
-                                                                new Layout("ShopBottomRight")
-                              )
-                );
-
-
-
-                ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu());
-                ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
-
-                if (GameState.MenuID != Menu.Game && GameState.MenuID != Menu.ExitMenu) {
-                        int Entry = GameState.MenuID switch {
-                                Menu.ShopEntry1 => 1,
-                                Menu.ShopEntry2 => 2,
-                                Menu.ShopEntry3 => 3,
-                                Menu.ShopEntry4 => 4,
-                                Menu.ShopEntry5 => 5,
-                                Menu.ShopEntry6 => 6,
-                                Menu.ShopEntry7 => 7,
-                                Menu.ShopEntry8 => 8,
-                                _ => 0
-                        };
-
-                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(Entry));
-                }
-
-                if (GameState.MenuID == Menu.ShopFeedBackSuccess) {
-                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(0)); // success
-                } else if (GameState.MenuID == Menu.ShopFeedBackRejected) {
-                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(1)); // Fail cuz broke
-                } else if (GameState.MenuID == Menu.ShopFeedBackFailByError) {
-                        ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(2)); // Fail cuz broke
-                }
-
-                return ShopLayout;
-
-        }
-
-
-}
-
-public class PlanetStuff
-{
-        public static void ApplyPlanetBuff() {
-                if (GameState.PlanetOn == Planet.Origo && GameState.IsLanded) { // default starting planet
-                        PlanetFactoryBonus = 0.0d; // in percent form its applied as (baseproduction) * (1 + this) , so if 1.0 (Max) you get a 100% bonus on production, if -0.99 (max lowest) you get -99% production, going past -0.99 you go * 0 which is just zero thats a nono, unless you want to disable this function on this planet
-                        PlanetMiningBonus = 0.0d;
-                        // no buffs
-                } else if (GameState.PlanetOn == Planet.Primaris && GameState.IsLanded) {
-                        PlanetFactoryBonus = -0.80d; // -80%
-                        PlanetMiningBonus = 1.0d; // 100%
-                } else if (GameState.PlanetOn == Planet.Sterelis && GameState.IsLanded) {
-                        PlanetFactoryBonus = 0.80d; // 80%
-                        PlanetMiningBonus = -0.90d; // -90%
-                } else if (GameState.PlanetOn == Planet.Space || GameState.IsOrbiting) {
-                        PlanetFactoryBonus = -1.0d; // -100%
-                        PlanetMiningBonus = -1.0d; // -100%
-                        // theres no gravity, your factories wont work, and you cant mine in nothing
-                }
-        }
-}
-
-public class PlanetUI
-{
-        public Layout ShowPlanetUI() {
-                var PlanetLayout = new Layout("PlanetRoot").SplitRows(
-                        new Layout("PlanetTop").SplitColumns(
-                                new Layout("PlanetTopLeft"), // Something like a map
-                                new Layout("PlanetTopRight") // Chosen Planet Description
-                        ),
-                        new Layout("PlanetBottom") // Planet you can move to, and keybinds
-                );
-
-                PlanetLayout["PlanetTopLeft"].Update(Panels.PlanetUIMap());
-                PlanetLayout["PlanetBottom"].Update(Panels.PlanetUIChoice());
-
-                if (GameState.MenuID == Menu.PlanetUiOrigo) {
-                        PlanetLayout["PlanetTopRight"].Update(Panels.OrigoPlanetPanel());
-                } else if (GameState.MenuID == Menu.PlanetUiSterelis) {
-                        PlanetLayout["PlanetTopRight"].Update(Panels.SterilisPlanetPanel());
-                } else if (GameState.MenuID == Menu.PlanetUiPrimaris) {
-                        PlanetLayout["PlanetTopRight"].Update(Panels.PrimarisPlanetPanel());
-                } else if (GameState.MenuID == Menu.PlanetUiSpace) {
-                        PlanetLayout["PlanetTopRight"].Update(Panels.SpacePanel());
-                }
-
-                return PlanetLayout;
-        }
-}
-
-public static class Panels
-{
-        public static Panel BuildStatPanel() {
-                // var "PanelName" = new Panel("string to use");
-                var GameStatPanel = new Panel(StringsStuff.GamePanelStats);
-                // {PanelName}.{Attribute} = {Value};
-                GameStatPanel.Width = 70;
-                GameStatPanel.Height = 16;
-                GameStatPanel.Header = new PanelHeader(" Game : Stat Menu");
-                return GameStatPanel;
-        }
-
-        public static Panel ShopBuildEntryPanel(int panel) {
-                Panel entry = panel switch {
-                        1 => new Panel(StringsStuff.ShopEntryPanel1),
-                        2 => new Panel(StringsStuff.ShopEntryPanel2),
-                        3 => new Panel(StringsStuff.ShopEntryPanel3),
-                        4 => new Panel(StringsStuff.ShopEntryPanel4),
-                        5 => new Panel(StringsStuff.ShopEntryPanel5),
-                        6 => new Panel(StringsStuff.ShopEntryPanel6),
-                        7 => new Panel(StringsStuff.ShopEntryPanel7),
-                        8 => new Panel(StringsStuff.ShopEntryPanel8),
-                        _ => new Panel("No entry chosen")
-                };
-
-                entry.Width = 71;
-                entry.Height = 16;
-                entry.Header = new PanelHeader($" Shop Menu : Entry {panel}");
-
-                return entry;
-        }
-
-        public static Panel ShopBuildBuyFeedback(int result) {
-                Panel DaResult = result switch {
-                        0 => new Panel($" Successfully Bought! "),
-                        1 => new Panel($" Cannot Afford! "),
-                        2 => new Panel($" An Error Occured! "),
-                        _ => new Panel($" some dumbass used the wrong argument ")
-                };
-
-                return DaResult;
-        }
-
-        public static Panel ShopBuildShopMenu() {
-                var ShopMenu = new Panel(StringsStuff.ShopMainPanel);
-
-                ShopMenu.Header = new PanelHeader(" Shop Menu ");
-                ShopMenu.Width = 67;
-                ShopMenu.Height = 32;
-
-                return ShopMenu;
-        }
-
-        public static Panel EmptyEvent() {
-                var EmptyEventPanel = new Panel(StringsStuff.EmptyEvent);
-
-                EmptyEventPanel.Width = 70;
-                EmptyEventPanel.Height = 16;
-                EmptyEventPanel.Header = new PanelHeader(" Game : Event Menu ");
-
-                return EmptyEventPanel;
-        }
-
-        public static Panel AlphaForcedEvent1() {
-                var AlphaForcedEvent1 = new Panel(StringsStuff.ForcedAlphaEvent1);
-
-                AlphaForcedEvent1.Width = 70;
-                AlphaForcedEvent1.Height = 16;
-                AlphaForcedEvent1.Header = new PanelHeader(" Game : Event Menu ");
-
-                return AlphaForcedEvent1;
-        }
-
-        public static Panel AlphaForcedEvent2() {
-                var AlphaForcedEvent2 = new Panel(StringsStuff.ForcedAlphaEvent2);
-
-                AlphaForcedEvent2.Width = 70;
-                AlphaForcedEvent2.Height = 16;
-                AlphaForcedEvent2.Header = new PanelHeader(" Game : Event Menu ");
-
-                return AlphaForcedEvent2;
-        }
-
-        public static Panel AlphaForcedEvent3() {
-                var panel = new Panel(StringsStuff.ForcedAlphaEvent3);
-
-                panel.Width = 70;
-                panel.Height = 16;
-                panel.Header = new PanelHeader(" Game : Event Menu ");
-
-                return panel;
-        }
-
-        public static Panel AlphaForcedEvent4() {
-                var panel = new Panel(StringsStuff.ForcedAlphaEvent4);
-
-                panel.Width = 70;
-                panel.Height = 16;
-                panel.Header = new PanelHeader(" Game : Event Menu ");
-
-                return panel;
-        }
-
-        // Same pattern for BetaForcedEvent3, BetaForcedEvent4, GammaForcedEvent3, GammaForcedEvent4
-
-        public static Panel BetaForcedEvent1() {
-                var BetaForcedEvent1 = new Panel(StringsStuff.ForcedBetaEvent1);
-
-                BetaForcedEvent1.Width = 70;
-                BetaForcedEvent1.Height = 16;
-                BetaForcedEvent1.Header = new PanelHeader(" Game : Event Menu ");
-
-                return BetaForcedEvent1;
-        }
-
-        public static Panel BetaForcedEvent2() {
-                var BetaForcedEvent2 = new Panel(StringsStuff.ForcedBetaEvent2);
-
-                BetaForcedEvent2.Width = 70;
-                BetaForcedEvent2.Height = 16;
-                BetaForcedEvent2.Header = new PanelHeader(" Game : Event Menu ");
-
-                return BetaForcedEvent2;
-        }
-
-        public static Panel BetaForcedEvent3() {
-                var BetaForcedEvent3 = new Panel(StringsStuff.ForcedBetaEvent3);
-
-                BetaForcedEvent3.Width = 70;
-                BetaForcedEvent3.Height = 16;
-                BetaForcedEvent3.Header = new PanelHeader(" Game : Event Menu ");
-
-                return BetaForcedEvent3;
-        }
-
-        public static Panel BetaForcedEvent4() {
-                var BetaForcedEvent4 = new Panel(StringsStuff.ForcedBetaEvent4);
-
-                BetaForcedEvent4.Width = 70;
-                BetaForcedEvent4.Height = 16;
-                BetaForcedEvent4.Header = new PanelHeader(" Game : Event Menu ");
-
-                return BetaForcedEvent4;
-        }
-
-        public static Panel GammaForcedEvent1() {
-                var GammaForcedEvent1 = new Panel(StringsStuff.ForcedGammaEvent1);
-
-                GammaForcedEvent1.Width = 70;
-                GammaForcedEvent1.Height = 16;
-                GammaForcedEvent1.Header = new PanelHeader(" Game : Event Menu ");
-
-                return GammaForcedEvent1;
-        }
-
-        public static Panel GammaForcedEvent2() {
-                var GammaForcedEvent2 = new Panel(StringsStuff.ForcedGammaEvent2);
-
-                GammaForcedEvent2.Width = 70;
-                GammaForcedEvent2.Height = 16;
-                GammaForcedEvent2.Header = new PanelHeader(" Game : Event Menu ");
-
-                return GammaForcedEvent2;
-        }
-
-        public static Panel GammaForcedEvent3() {
-                var GammaForcedEvent3 = new Panel(StringsStuff.ForcedGammaEvent3);
-
-                GammaForcedEvent3.Width = 70;
-                GammaForcedEvent3.Height = 16;
-                GammaForcedEvent3.Header = new PanelHeader(" Game : Event Menu ");
-
-                return GammaForcedEvent3;
-        }
-
-        public static Panel GammaForcedEvent4() {
-                var GammaForcedEvent4 = new Panel(StringsStuff.ForcedGammaEvent4);
-
-                GammaForcedEvent4.Width = 70;
-                GammaForcedEvent4.Height = 16;
-                GammaForcedEvent4.Header = new PanelHeader(" Game : Event Menu ");
-
-                return GammaForcedEvent4;
-        }
-
-        public static Panel OrigoPlanetPanel() {
-                var OrigoPlanetPanel = new Panel(StringsStuff.OrigoPlanetPanelString);
-
-                OrigoPlanetPanel.Width = 71;
-                OrigoPlanetPanel.Height = 16;
-                OrigoPlanetPanel.Header = new PanelHeader(" Planet : Origo ");
-
-                return OrigoPlanetPanel;
-        }
-
-        public static Panel PrimarisPlanetPanel() {
-                var PrimarisPlanetPanel = new Panel(StringsStuff.PrimarisPlanetPanelString);
-
-                PrimarisPlanetPanel.Width = 71;
-                PrimarisPlanetPanel.Height = 16;
-                PrimarisPlanetPanel.Header = new PanelHeader(" Planet : Primaris ");
-
-                return PrimarisPlanetPanel;
-        }
-
-        public static Panel SterilisPlanetPanel() {
-                var SterilisPlanetPanel = new Panel(StringsStuff.SterilisPlanetPanelString);
-
-                SterilisPlanetPanel.Width = 71;
-                SterilisPlanetPanel.Height = 16;
-                SterilisPlanetPanel.Header = new PanelHeader(" Planet : Sterilis ");
-
-                return SterilisPlanetPanel;
-        }
-
-        public static Panel SpacePanel() {
-                var SpacePanel = new Panel(StringsStuff.SpacePanelString);
-
-                SpacePanel.Width = 71;
-                SpacePanel.Height = 16;
-                SpacePanel.Header = new PanelHeader(" Location : Space ");
-
-                return SpacePanel;
-        }
-
-        public static Panel PlanetUIChoice() {
-                var PlanetUIChoice = new Panel(StringsStuff.PlanetChoices);
-
-                PlanetUIChoice.Width = 141;
-                PlanetUIChoice.Height = 17;
-                PlanetUIChoice.Header = new PanelHeader(" Navigation Menu ");
-
-                return PlanetUIChoice;
-        }
-
-        public static Panel PlanetUIMap() {
-                var PlanetUIMap = new Panel(StringsStuff.SupposedMap);
-
-                PlanetUIMap.Width = 70;
-                PlanetUIMap.Height = 16;
-                PlanetUIMap.Header = new PanelHeader(" Navigation Menu : Map ");
-
-                return PlanetUIMap;
-        }
-}
-
-public static class Tables
-{
-        public static Table GameBuildFactoryTable() {
-                var FactoryTable = new Table();
-
-                FactoryTable.AddColumn("[white] Factory [/]"); // Make Columns (the vertical slices)
-                FactoryTable.AddColumn("[white] Amount [/]");
-                FactoryTable.AddColumn("[white] Status [/]");
-
-                FactoryTable.AddRow(
-                        "[yellow] Alpha [/]", // refer to Colums made
-                        UpgradeTrack.AlphaFactory.ToString(),
-                                    AlphaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{AlphaFactory.HaltReason}"
-                );
-                FactoryTable.AddRow(
-                        "[blue] Beta [/]",
-                        UpgradeTrack.BetaFactory.ToString(),
-                                    BetaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{BetaFactory.HaltReason}"
-                );
-                FactoryTable.AddRow(
-                        "[green] Gamma [/]",
-                        UpgradeTrack.GammaFactory.ToString(),
-                                    GammaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{GammaFactory.HaltReason}"
-                );
-
-                FactoryTable.Border = TableBorder.Rounded;
-                FactoryTable.Width = 70;
-
-                return FactoryTable;
-
-        }
-
-        public static Table GameBuildUpgradeTable() {
-                var UpgradeTable = new Table();
-
-                // FactoryTable.AddColumn("[white] Amount [/]");
-
-                UpgradeTable.AddColumn("[white] Upgrade [/]");
-                UpgradeTable.AddColumn("[white] Bought [/]");
-                UpgradeTable.AddColumn("[white] Effects [/]");
-
-                UpgradeTable.AddRow(
-                        "[cyan]Essence[/] Base Upgrade", UpgradeTrack.EssenceBaseBought.ToString(), "Temp"
-                );
-                UpgradeTable.AddRow(
-                        "[cyan]Essence[/] Multiplier Upgrade", UpgradeTrack.EssenceMultiplierBought.ToString(), "Temp"
-                );
-                UpgradeTable.AddRow(
-                        "[purple]Factory Input Upgrade[/]", UpgradeTrack.FactoryInputUpgradeBought.ToString(), "Temp"
-                );
-                UpgradeTable.AddRow(
-                        "[purple]Factory Output Upgrade[/]", UpgradeTrack.FactoryOutputUpgradeBought.ToString(), "Temp"
-                );
-
-                UpgradeTable.Border = TableBorder.Rounded;
-                UpgradeTable.Width = 70;
-
-                return UpgradeTable;
-        }
-}
-
 public class ResourceBP
 {
         public double Amount { get; set; } // get; set; tells that its readable and writable
@@ -1607,321 +809,8 @@ public class ResourceBP
         }
 }
 
-public static class StringsStuff
+
+public class SpecialFactory // ones that could change Recipes
 {
-        public static string GamePanelStats =>
-        $"[white][/]\n" +
-        $"[cyan]Essence : {EssenceWallet.Amount:F1}[/] | {NetProd.Essence.ToString("F2")} / sec | [cyan]{GetEssenceBar()}[/]\n" +
-        $"[white][/]\n" +
-        $"[yellow]Alpha : {AlphaWallet.Amount:F1}[/] | {NetProd.Alpha.ToString("F2")} / sec |  [yellow]{GetAlphaBar()}[/]\n" +
-        $"[blue]Beta : {BetaWallet.Amount:F1}[/] | {NetProd.Beta.ToString("F2")} / sec | [blue]{GetBetaBar()}[/]\n" +
-        $"[green]Gamma : {GammaWallet.Amount:F1}[/] | {NetProd.Gamma.ToString("F2")} / sec | [green]{GetGammaBar()}[/]\n" +
-        $"\n" +
-        $"\n"
-        // $"Debug\n" +
-        // $"AlphaFactory : {AlphaFactoryProgressIncrement}\n" +
-        // $"BetaFactory : {BetaFactoryProgressIncrement}\n" +
-        // $"GammaFactory : {GammaFactoryProgressIncrement}\n"
-        // $"Event to show : {EventSystem.EventToShow.ToString()}\n" +
-        // $"Alpha Forced Event Done : {EventSystem.AlphaForcedEventDone.ToString()}\n" +
-        // $"Event Incrementer : {EventIncrement.ToString()}\n" +
-        // $"Can Show : {EventSystem.CanShowEvent.ToString()}\n" +
-        // $"ForcedEventWantToShow : {EventSystem.ForcedEventWantToShow.ToString()}\n"
-        ;
 
-        public static string ShopMainPanel =>
-        $"Here, you can Buy more Factories, Essence Upgrades (and Factory upgrades in the future).\n" +
-        $"\n" +
-        $"\n" +
-        $" > Factories < \n" +
-        $"  -> [yellow] Alpha Factory [/] Press 1 to see\n" +
-        $"  -> [blue] Beta Factory [/] Press 2 to see\n" +
-        $"  -> [green] Gamma Factory [/] Press 3 to see\n" +
-        $"\n" +
-        $"\n" +
-        $" > [blue]Essence[/] Upgrades < \n" +
-        $"\n" +
-        $" -> [cyan]Essence Base Production[/] Press 4 to see\n" +
-        $" -> [cyan]Essence Multiplier[/] Press 5 to see\n" +
-        $"\n" +
-        $"\n" +
-        $" > Factory Upgrade < \n" +
-        $"\n" +
-        $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
-        $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n" +
-        $"\n" +
-        $"\n" +
-        $" > Miners < \n" +
-        $"\n" +
-        $" -> [cyan] Essence Miner [/] Press 8 to see \n "
-        ;
-
-        public static string ShopEntryPanel1 =>
-        $"[yellow] Alpha Factory [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - A factory that Consumes [cyan]1 Essence[/] to produce [yellow]1 Alpha[/] Per tick.\n" +
-        $"\n" +
-        $"Cost : [cyan]{UpgradeTrack.AlphaFactoryCost}[/]\n" +
-        $"" +
-        $"You currently have : [yellow]{UpgradeTrack.AlphaFactory}[/] Factories\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel2 =>
-        $"[blue] Beta Factory [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - A factory that Consumes [yellow]1 Alpha[/] to produce [blue]1 Beta[/] Per tick.\n" +
-        $"\n" +
-        $"Cost : [cyan]{UpgradeTrack.BetaFactoryCost}[/]\n" +
-        $"" +
-        $"You currently have : [blue]{UpgradeTrack.BetaFactory}[/] Factories\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel3 =>
-        $"[green] Gamma Factory [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - A factory that Consumes [yellow]1 Alpha[/] and [blue]1 Beta [/]to produce [green]1 Gamma[/] Per tick.\n" +
-        $"\n" +
-        $"Cost : [cyan]{UpgradeTrack.GammaFactoryCost}[/]\n" +
-        $"" +
-        $"You currently have : [green]{UpgradeTrack.GammaFactory}[/] Factories\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel4 =>
-        $"[cyan] Essence Base Production [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - [cyan]Essence[/] Is produced at the rate of Base multiplied by a Multiplier ( E = Base*multiplier ), buying this adds +1 Essence per tick times {UpgradeTrack.EssenceMultiplierBought}\n" +
-        $"\n" +
-        $"Cost : [yellow]{UpgradeTrack.EssenceBaseCost} Alpha[/]\n" +
-        $"" +
-        $"You currently have : [cyan]{UpgradeTrack.EssenceBaseBought} Base Essence Production[/]\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel5 =>
-        $"[cyan] Essence Multiplier [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - Adds A Multiplier for [cyan]Essence[/] Production\n" +
-        $"\n" +
-        $"Cost : [blue]{UpgradeTrack.EssenceMultiplierCost} Beta[/]\n" +
-        $"" +
-        $"You currently have : [cyan]{UpgradeTrack.EssenceMultiplierBought} Essence Multiplier[/]\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel6 =>
-        $"[purple] Factory Input mechanism [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - Improving the Input Mechanism of all Factory, improving and reducing needed Resource input by 5%\n" +
-        $"\n" +
-        $"Cost : [green]{UpgradeTrack.FactoryInputUpgradeCost} Gamma[/]\n" +
-        $"" +
-        $"You currently have : [white]{UpgradeTrack.FactoryInputUpgradeBought} Upgrades Bought[/]\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel7 =>
-        $"[purple] Factory Line Performance Optimisation [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - Improving the Factory Line to gain ~10% Output for the same Input some said 'why are we using an inefficient one in the first place?' \n" +
-        $"\n" +
-        $"Cost : [green]{UpgradeTrack.FactoryOutputUpgradeCost} Gamma[/]\n" +
-        $"" +
-        $"You currently have : [white]{UpgradeTrack.FactoryOutputUpgradeBought} Upgrades Bought[/]\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ShopEntryPanel8 =>
-        $"[cyan] Essence Miner [/]\n" +
-        $"\n" +
-        $"Description : \n" +
-        $" - An Essence Miner, To mine the Mysterious Material [cyan]'Essence'[/], said to have an unknown origin, but is the Base Material in Synthesizing Alpha.\n" +
-        $"\n" +
-        $"Cost : [yellow]{UpgradeTrack.EssenceMinerCost} Alpha[/]\n" +
-        $"" +
-        $"You currently have : [cyan]{UpgradeTrack.EssenceMiner} Miners Bought[/]\n" +
-        $"\n" +
-        $"Press ENTER to Purchase\n" +
-        $"Press B to Go back\n"
-        ;
-
-        public static string ForcedAlphaEvent1 =>
-        $"Alpha Factory Licensing Changes\n" +
-        $"\n" +
-        $"The [purple]Council[/] has made Changes upon the discovery of Total Alpha Prodcution in the 'PlaceHolder' Sector.. Alpha Factory Prices has been [red]Permanently raised by 100%.[/]\n" +
-        $"\n"
-        ;
-
-        public static string ForcedAlphaEvent2 =>
-        $"Alpha Factory Licensing Changes : A looming threat\n" +
-        $"\n" +
-        $"The [purple]Council[/] is pushing new Licensing changes on Alpha Factories on the 'PlaceHolder' sector.. Alpha Factory Prices is [red]Permanently raised by 80%[/].\n" +
-        $"\n"
-        ;
-
-        public static string ForcedAlphaEvent3 =>
-        $"Alpha Factory Tariff Adjustment\n" +
-        $"\n" +
-        $"The [purple]Council[/] has reviewed updated Alpha production figures across the sector. A revised tariff schedule has been filed. [red]Alpha Factory costs increased by 130%[/].\n" +
-        $"\n" +
-        $"[gray]\"Market stabilization protocol. Nothing personal.\"[/]\n"
-        ;
-
-        public static string ForcedAlphaEvent4 =>
-        $"Alpha Factory Quota Update\n" +
-        $"\n" +
-        $"With Alpha production reaching unprecedented levels, the [purple]Council[/] has enacted a supplementary licensing adjustment. [red]Alpha Factory costs increased by 50%[/].\n" +
-        $"\n" +
-        $"[gray]\"You've been busy. We noticed. This is just procedure.\"[/]\n"
-        ;
-
-        public static string ForcedBetaEvent1 =>
-        $"Beta Factory Licensing Changes\n" +
-        $"\n" +
-        $"After a board meeting, The [purple]Council[/] has Decided to raise Beta Factory licensing prices to a [red]staggering 150%[/], [bold]'Wouldve been smarter to have bought them in bulk earlier....'[/]\n" +
-        $"\n"
-        ;
-
-        public static string ForcedBetaEvent2 =>
-        $"Beta Factory Cost Raise\n" +
-        $"\n" +
-        $"Due to some bureaucratic tomfoolery, The Market Cost for Beta factories is [red]raised by 80%[/]....\n" +
-        $"\n"
-        ;
-
-        public static string ForcedBetaEvent3 =>
-        $"Beta Factory Compliance Review\n" +
-        $"\n" +
-        $"The [purple]Council[/]'s quarterly compliance review has concluded. Beta Factory licensing has been recategorized under a new administrative schedule. [red]Beta Factory costs increased by 40%[/].\n" +
-        $"\n" +
-        $"[gray]\"The forms were filed weeks ago. You were notified.\"[/]\n"
-        ;
-
-        public static string ForcedBetaEvent4 =>
-        $"Beta Factory Licensing Restructure\n" +
-        $"\n" +
-        $"Significant Beta production output has triggered an automatic licensing restructure per Council mandate. [red]Beta Factory costs increased by 150%[/].\n" +
-        $"\n" +
-        $"[gray]\"We don't make the rules. Well, we do. But we filed them properly.\"[/]\n"
-        ;
-
-        public static string ForcedGammaEvent1 =>
-        $"Gamma Factory Raised costs\n" +
-        $"\n" +
-        $"Due to the Rarity and difficulty to Produce Gamma, a Sector spread Panic buying is happening, causing for Gamma Factory cost to Skyrocket up to [red]130% price increase[/]!\n" +
-        $"\n"
-        ;
-
-        public static string ForcedGammaEvent2 =>
-        $"Gamma Factory Construction Material\n" +
-        $"\n" +
-        $"An Event happened Causing Gamma Factory Construction materials to be rarer, increasing demand causes price to [red]Rise by 90%[/]\n" +
-        $"\n"
-        ;
-
-        public static string ForcedGammaEvent3 =>
-        $"Gamma Factory Administrative Review\n" +
-        $"\n" +
-        $"The [purple]Council[/] has completed its review of Gamma production permits. A new fee structure has been approved and applied retroactively. [red]Gamma Factory costs increased by 60%[/].\n" +
-        $"\n" +
-        $"[gray]\"You can appeal. Form 47-B. Processing time: 18 months.\"[/]\n"
-        ;
-
-        public static string ForcedGammaEvent4 =>
-        $"Gamma Factory Sector-Wide Adjustment\n" +
-        $"\n" +
-        $"Gamma production has exceeded projected thresholds. The [purple]Council[/] has issued a mandatory licensing adjustment to maintain market equilibrium. [red]Gamma Factory costs increased by 100%[/].\n" +
-        $"\n" +
-        $"[gray]\"Congratulations on the milestone. Here's the bill.\"[/]\n"
-        ;
-
-        public static string EmptyEvent =>
-        $"No event has happened yet."
-        ;
-
-        public static string PrimarisPlanetPanelString =>
-        $"[cyan]Primāris[/]\n" +
-        $"\n" +
-        $"A Planet Rich in Essence, Scriptures Dates back to 2099, when the first humans First discovered this Planet,\n" +
-        $"it is documented to have Uneven and rough terrain making factory production almost impossible, only Miners is unaffected\n" +
-        $"Scriptures document Structures like [red]&%#%## %#$#@[/] and [red]##%**%[/] Containing [red]#%##@@![/], Last Expidition Sent has not returned\n" +
-        $"Messages sent by the last team reports :[gray] @$@$!U@%*@ -HEL #@$@% IT'S GO*%#% TOW#%# US [/]" +
-        $"Expedition to structures is [red]not recommended[/]\n" +
-        $"\n" +
-        $"\n" +
-        $"Bonus Mining Productivity : [green]100%[/] \n" +
-        $"Bonus Factory Productivity : [red]-80%[/] \n"
-        ;
-
-        public static string SterilisPlanetPanelString =>
-        $"[gray]Sterelis[/]\n" +
-        $"\n" +
-        $"This Planet is not rich on any minable resources hence the name, however, it is known to have a Large open area and friendly climate that Greatly enhances Factory Production.\n This is a great Planet to setup a big Factory line!" +
-        $"\n" +
-        $"\n" +
-        $"Bonus Mining Productivity : [red]-90%[/] \n" +
-        $"Bonus Factory Productivity : [green]+80%[/] \n"
-        ;
-
-        public static string OrigoPlanetPanelString =>
-        $"[green]Origo[/]\n" +
-        $"\n" +
-        $"The only known data: Scripture from the old world (2006)\n" +
-        $"A rocky, terrestrial planet. A radius of around [red]@%##*[/], 70% of its\n" +
-        $"surface is covered with #&%#@*, and enveloped by [red]*#%@)[/] protecting it\n" +
-        $"from the harshness of space. It contains the material known as\n" +
-        $"'[red]@$@$(%)[/]'...\n" +
-        $"[bold]\"It is the only place to date, known to have life in the Universe.\"[/]\n" +
-        $"The rest is unreadable.\n" +
-        $"\n" +
-        $"Bonus Mining Productivity: [gray]0%[/]\n" +
-        $"Bonus Factory Productivity: [gray]0%[/]\n"
-        ;
-
-        public static string SupposedMap =>
-        $"Hi! Im map, I may now look like it right now, But Im trying my best!"
-        ;
-
-        public static string PlanetChoices =>
-        $"Known Planets : \n" +
-        $"\n" +
-        $" > Planets < \n" +
-        $"\n" +
-        $" > [green]Origo[/] ([green]Landed[/]) (1)\n" +
-        $" > [gray]Sterelis[/] ([red]Landed[/]) (2)\n" +
-        $" > [cyan]Primaris[/] ([red]Landed[/]) (3)\n"
-        ;
-
-        public static string SpacePanelString =>
-        $"[purple]Space[/]\n" +
-        $"\n" +
-        $"Its cold here.." +
-        $"No Life, Other than..Me..\n" +
-        $"\n" +
-        $"Bonus Mining Productivity: [red]-100%[/]\n" +
-        $"Bonus Factory Productivity: [red]-100%[/]\n"
-        ;
 }

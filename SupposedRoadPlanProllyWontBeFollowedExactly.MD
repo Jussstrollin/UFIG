@@ -29,3 +29,29 @@ This is what id be basing off for now, it shouldnt have been added but its here 
    - Sector based bonuses, alliances, possibly wars, itd turn to a factory management game with RTS qualities.. in the future
 
 ## ?? future, new mechanics, Opposing forces, etc.
+
+
+## Future plan or near future? i dont care whatever, they are in consideration and is COOOOOL
+- Outposts system
+  : You can make a vessel turn to an outpost, and youd need to create new vessel to move again
+   An outpost can transfer stuff from one another, Magically for now. So instead of mobing to a planet and exploiting their Bonus while suffering the downsides, you can just make that Outpost fully eploit the bonus then transfer the spoils that can use said stuff.
+   a Mining outpost to exploit +80% mining that doesnt care about the -90% factory debuff cuz its just mining, then another to another planet that can use said mined stuff to turn that with 90% production bonus, MOAR STUFFFFFFFF
+   
+   Definition :
+   Vessel, this is "you" or rather the you than can move from planet to planet, you need them to move or youre stuck on the Planet youre on
+   
+   Outpost, this is also "you" buy you cant move, if i ever did vessels having max of x, an outpost doesnt have to obey that
+   
+  - Multiplanetary conquest
+    - said above, exploit the good bonuses, then more or less dont care about the tradeoffs
+  - Multi-Solar System conquest
+    - Same as planetary but multiple planets
+  - will start at mid game / tier 2 stuff
+  
+- Tier 2 (near future the start of late-early game, just before mid game)
+ - new Base material : like the job of Essence now but for tier 2 stuff
+ - New arcospheres : Delta, Epsilon, Zeta, will have new jobs that they need to fill, not just better tier 1.
+
+- Travel System UI
+ - the idea is you cant do any shitm aside from Planning or Chilling.
+## Factorio devs, dont sue me pls
