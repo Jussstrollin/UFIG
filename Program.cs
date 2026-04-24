@@ -30,6 +30,7 @@ using static Program;
 using static StringsStuff;
 using static EventSystem;
 
+
 public static class Program
 {
         static DateTime LastGameTick = DateTime.Now;
@@ -41,6 +42,11 @@ public static class Program
         static DateTime LastBetaFactoryTick = DateTime.Now;
         static DateTime LastGammaFactoryTick = DateTime.Now;
         static DateTime LastProgressBarsTick = DateTime.Now;
+
+        // lowest -0.99, highest 1.0
+        public static double PlanetMiningBonus = 0.0d;
+        // lowest -0.99, highest 1.0
+        public static double PlanetFactoryBonus = 0.0d;
 
         public static int AlphaFactoryProgressIncrement = 0;
         public static int BetaFactoryProgressIncrement = 0;
@@ -94,6 +100,10 @@ public static class Program
 
                 public bool Pause;
                 public bool Stop;
+
+                public Planet PlanetOn;
+                public bool IsOrbiting;
+                public bool IsLanded;
         }
 
         // ============================================== //
@@ -106,9 +116,9 @@ public static class Program
         public static ResourceBP GammaWallet = new ResourceBP(0.0f);
         public static ResourceBP EssenceWallet = new ResourceBP(1.0f);
 
-        public static Factory AlphaFactory = new Factory(Resources.Alpha, 1.0d, 0.0d, 0.0d, 1.0d);
-        public static Factory BetaFactory = new Factory(Resources.Beta, 1.0d, 0.0d, 0.0d, 1.0d);
-        public static Factory GammaFactory = new Factory(Resources.Gamma, 2.0d, 1.0d, 1.0d, 1.0d);
+        public static FactoryStuff AlphaFactory = new FactoryStuff(Resources.Alpha, 1.0d, 0.0d, 0.0d, 1.0d);
+        public static FactoryStuff BetaFactory = new FactoryStuff(Resources.Beta, 1.0d, 0.0d, 0.0d, 1.0d);
+        public static FactoryStuff GammaFactory = new FactoryStuff(Resources.Gamma, 2.0d, 1.0d, 1.0d, 1.0d);
 
         public static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
                 EssenceMiner = 1,
@@ -142,28 +152,49 @@ public static class Program
                 FactoryOutputUpgradeCost = 100 // gamma
         };
 
-        public enum Menu {
-                Game,
-                ShopNoEntry,
-                ShopEntry1,
-                ShopEntry2,
-                ShopEntry3,
-                ShopEntry4,
-                ShopEntry5,
-                ShopEntry6,
-                ShopEntry7,
-                ShopEntry8,
-                ShopFeedBackSuccess,
-                ShopFeedBackRejected,
-                ShopFeedBackFailByError,
-                ExitMenu
+        public enum Menu { // NOTE : ALWAYS BE **EXPLICIT** TO SET THE INT VALUE FOR EACH
+                // any submenu from Game will be from 0-99
+                Game = 0,
+
+                // Submenu for Shop is 100-199
+                ShopNoEntry = 100,
+                ShopEntry1 = 101,
+                ShopEntry2 = 102,
+                ShopEntry3 = 103,
+                ShopEntry4 = 104,
+                ShopEntry5 = 105,
+                ShopEntry6 = 106,
+                ShopEntry7 = 107,
+                ShopEntry8 = 108,
+                ShopFeedBackSuccess = 109,
+                ShopFeedBackRejected = 110,
+                ShopFeedBackFailByError = 111,
+
+                // Special stuff is reserved for 900-1000
+                ExitMenu = 900,
+
+                // Planet map related is 200-299
+                PlanetUiSpace = 200, // not on any Planet
+                PlanetUiOrigo = 201,
+                PlanetUiSterelis = 202,
+                PlanetUiPrimaris = 203
+        }
+
+        public enum Planet {
+                Space,
+                Origo,
+                Primaris,
+                Sterelis
         }
 
         public static GameStateBP GameState = new GameStateBP {
                 MenuID = Menu.Game,
                 Progress = 0,
                 Pause = false,
-                Stop = false
+                Stop = false,
+                PlanetOn = Planet.Origo, // Default starting Planet and states
+                IsOrbiting = false,
+                IsLanded = true
         };
 
         static void Main() {
@@ -456,24 +487,31 @@ public static class Program
         }
 
         static void HandleDisplay() {
-
                 int TerminalWidth = Console.WindowWidth;
                 int TerminalHeight = Console.WindowHeight;
 
                 var GameUi = new GameUI();
-                var ShopUi =  new ShopUI();
+                var ShopUi = new ShopUI();
+                var PlanetUi = new PlanetUI();
 
-                if (GameState.MenuID == 0.0f) {
+                if (GameState.MenuID == Menu.Game) {
                         AnsiConsole.Write(GameUi.InitGameLayout());
-                } else {
+                } else if (GameState.MenuID == Menu.ExitMenu) {
+                        ExitSequence();
+                } else if (GameState.MenuID == Menu.PlanetUiSpace ||
+                        GameState.MenuID == Menu.PlanetUiOrigo ||
+                        GameState.MenuID == Menu.PlanetUiPrimaris ||
+                        GameState.MenuID == Menu.PlanetUiSterelis
+                ) {
+                        AnsiConsole.Write(PlanetUi.ShowPlanetUI());
+                } else if (GameState.MenuID != Menu.Game &&
+                        GameState.MenuID != Menu.ExitMenu &&
+                        GameState.MenuID != Menu.PlanetUiSpace &&
+                        GameState.MenuID != Menu.PlanetUiOrigo &&
+                        GameState.MenuID != Menu.PlanetUiPrimaris &&
+                        GameState.MenuID != Menu.PlanetUiSterelis) {
                         AnsiConsole.Write(ShopUi.ShopMenuLayout());
                 }
-
-                if (GameState.MenuID == Menu.ExitMenu) {
-                        ExitSequence();
-                }
-
-
         }
 
         static void Save() {
@@ -575,27 +613,44 @@ public static class Program
                 bool IsInGame = true; // default values
                 bool IsInShop = false;
                 bool IsInExit = false;
+                bool IsInPlanetaryMap = false;
 
                 if (GameState.MenuID == Menu.Game) {
                         IsInGame = true;
                         IsInShop = false;
                         IsInExit = false;
-                } else if (GameState.MenuID != Menu.Game && GameState.MenuID != Menu.ExitMenu) {
+                        IsInPlanetaryMap = false;
+                } else if ((int)GameState.MenuID >= 100 && (int)GameState.MenuID <= 199) {
                         IsInGame = false;
                         IsInShop = true;
                         IsInExit = false;
+                        IsInPlanetaryMap = false;
                 } else if (GameState.MenuID == Menu.ExitMenu) {
                         IsInGame = false;
                         IsInShop = false;
                         IsInExit = true;
+                        IsInPlanetaryMap = false;
+                } else if ((int)GameState.MenuID >= 200 && (int)GameState.MenuID <= 299) {
+                        IsInGame = false;
+                        IsInShop = false;
+                        IsInExit = false;
+                        IsInPlanetaryMap = true;
                 } else {
-                        AnsiConsole.WriteLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how yo got here");
+                        AnsiConsole.WriteLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how you got here");
                 }
 
-                if (IsInGame) { // on menu
-                        if (Key == 'S') GameState.MenuID = Menu.ShopNoEntry; // go shop
-                } else if (IsInShop) { // vice-versa
-                        if (Key == 'S') GameState.MenuID = Menu.Game;
+                if (IsInGame || IsInShop || IsInPlanetaryMap) {
+                        if (Key == 'S') GameState.MenuID = Menu.ShopNoEntry;
+                        if (Key == 'G') GameState.MenuID = Menu.Game;
+                        if (Key == 'N') {
+                                GameState.MenuID = GameState.PlanetOn switch {
+                                        Planet.Space => Menu.PlanetUiSpace,
+                                        Planet.Origo => Menu.PlanetUiOrigo,
+                                        Planet.Sterelis => Menu.PlanetUiSterelis,
+                                        Planet.Primaris => Menu.PlanetUiPrimaris,
+                                        _ => Menu.PlanetUiSpace
+                                };
+                        }
                 }
 
                 // ==== Shop Functions ==== //
@@ -626,117 +681,45 @@ public static class Program
                 }
 
                 // Shop Buy and Feedbacks
-                if (GameState.MenuID == Menu.ShopEntry1) { // AlphaFactoryPage
-                        if (Key == '\r') { // wanabuy
-                                int result = WannaBuy(ToBuy.AlphaFactory);
+                if (Key == '\r' && !IsInExit && !IsInGame && !IsInPlanetaryMap) {
 
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess; // Successfull
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected; // fail by cant afford
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError; // fail by error
-                                }
+                        int result = -1; // default on error
+
+                        if (GameState.MenuID == Menu.ShopEntry1) {
+                                result = WannaBuy(ToBuy.AlphaFactory);
+                        } else if (GameState.MenuID == Menu.ShopEntry2) {
+                                result = WannaBuy(ToBuy.BetaFactory);
+                        } else if (GameState.MenuID == Menu.ShopEntry3) {
+                                result = WannaBuy(ToBuy.GammaFactory);
+                        } else if (GameState.MenuID == Menu.ShopEntry4) {
+                                result = WannaBuy(ToBuy.EssenceBase);
+                        } else if (GameState.MenuID == Menu.ShopEntry5) {
+                                result = WannaBuy(ToBuy.EssenceMultiplier);
+                        } else if (GameState.MenuID == Menu.ShopEntry6) {
+                                result = WannaBuy(ToBuy.FactoryInputUpgrade);
+                        } else if (GameState.MenuID == Menu.ShopEntry7) {
+                                result = WannaBuy(ToBuy.FactoryOutputUpgrade);
+                        } else if (GameState.MenuID == Menu.ShopEntry8) {
+                                result = WannaBuy(ToBuy.EssenceMiner);
+                        }
+
+                        if (result == 1) {
+                                GameState.MenuID = Menu.ShopFeedBackSuccess;
+                        } else if (result == 0) {
+                                GameState.MenuID = Menu.ShopFeedBackRejected;
+                        } else if (result == -1) {
+                                GameState.MenuID = Menu.ShopFeedBackFailByError;
                         }
                 }
 
-                if (GameState.MenuID == Menu.ShopEntry2) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.BetaFactory);
+                // PlanetaryMap
 
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
+                if (IsInPlanetaryMap) { // Switching Between Planet Descriptions
+                        if (Key == '1') GameState.MenuID = Menu.PlanetUiOrigo;
+                        if (Key == '2') GameState.MenuID = Menu.PlanetUiSterelis;
+                        if (Key == '3') GameState.MenuID = Menu.PlanetUiPrimaris;
                 }
 
-                if (GameState.MenuID == Menu.ShopEntry3) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.GammaFactory);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
-
-                if (GameState.MenuID == Menu.ShopEntry4) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.EssenceBase);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
-
-                if (GameState.MenuID == Menu.ShopEntry5) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.EssenceMultiplier);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
-
-                if (GameState.MenuID == Menu.ShopEntry6) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.FactoryInputUpgrade);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
-
-                if (GameState.MenuID == Menu.ShopEntry7) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.FactoryOutputUpgrade);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
-
-                if (GameState.MenuID == Menu.ShopEntry8) {
-                        if (Key == '\r') {
-                                int result = WannaBuy(ToBuy.EssenceMiner);
-
-                                if (result == 1) {
-                                        GameState.MenuID = Menu.ShopFeedBackSuccess;
-                                } else if (result == 0) {
-                                        GameState.MenuID = Menu.ShopFeedBackRejected;
-                                } else if (result == -1) {
-                                        GameState.MenuID = Menu.ShopFeedBackFailByError;
-                                }
-                        }
-                }
 
                 // Menu Stuff
 
@@ -762,7 +745,7 @@ public enum Resources {
         Gamma
 }
 
-public class Factory
+public class FactoryStuff
 {
         public Resources Resource { get; set; }
         public double Input1ResourceBase { get; set; } // like 1 for 1 Essence per tick
@@ -770,7 +753,7 @@ public class Factory
         public double Input3ResourceBase { get; set; }
         public double OutputResourceBase { get; set; }
 
-        public Factory(Resources Resource, double Input1ResourceBase, double Input2ResourceBase, double Input3ResourceBase, double OutputResourceBase) {
+        public FactoryStuff(Resources Resource, double Input1ResourceBase, double Input2ResourceBase, double Input3ResourceBase, double OutputResourceBase) {
                 this.Resource = Resource;
                 this.Input1ResourceBase = Input1ResourceBase;
                 this.Input2ResourceBase = Input2ResourceBase;
@@ -1182,6 +1165,54 @@ public class ShopUI
 
 }
 
+public class PlanetStuff
+{
+        public static void ApplyPlanetBuff() {
+                if (GameState.PlanetOn == Planet.Origo && GameState.IsLanded) { // default starting planet
+                        PlanetFactoryBonus = 0.0d; // in percent form its applied as (baseproduction) * (1 + this) , so if 1.0 (Max) you get a 100% bonus on production, if -0.99 (max lowest) you get -99% production, going past -0.99 you go * 0 which is just zero thats a nono, unless you want to disable this function on this planet
+                        PlanetMiningBonus = 0.0d;
+                        // no buffs
+                } else if (GameState.PlanetOn == Planet.Primaris && GameState.IsLanded) {
+                        PlanetFactoryBonus = -0.80d; // -80%
+                        PlanetMiningBonus = 1.0d; // 100%
+                } else if (GameState.PlanetOn == Planet.Sterelis && GameState.IsLanded) {
+                        PlanetFactoryBonus = 0.80d; // 80%
+                        PlanetMiningBonus = -0.90d; // -90%
+                } else if (GameState.PlanetOn == Planet.Space || GameState.IsOrbiting) {
+                        PlanetFactoryBonus = -1.0d; // -100%
+                        PlanetMiningBonus = -1.0d; // -100%
+                        // theres no gravity, your factories wont work, and you cant mine in nothing
+                }
+        }
+}
+
+public class PlanetUI
+{
+        public Layout ShowPlanetUI() {
+                var PlanetLayout = new Layout("PlanetRoot").SplitRows(
+                        new Layout("PlanetTop").SplitColumns(
+                                new Layout("PlanetTopLeft"), // Something like a map
+                                new Layout("PlanetTopRight") // Chosen Planet Description
+                        ),
+                        new Layout("PlanetBottom") // Planet you can move to, and keybinds
+                );
+
+                PlanetLayout["PlanetTopLeft"].Update(Panels.PlanetUIMap());
+                PlanetLayout["PlanetBottom"].Update(Panels.PlanetUIChoice());
+
+                if (GameState.MenuID == Menu.PlanetUiOrigo) {
+                        PlanetLayout["PlanetTopRight"].Update(Panels.OrigoPlanetPanel());
+                } else if (GameState.MenuID == Menu.PlanetUiSterelis) {
+                        PlanetLayout["PlanetTopRight"].Update(Panels.SterilisPlanetPanel());
+                } else if (GameState.MenuID == Menu.PlanetUiPrimaris) {
+                        PlanetLayout["PlanetTopRight"].Update(Panels.PrimarisPlanetPanel());
+                } else if (GameState.MenuID == Menu.PlanetUiSpace) {
+                        PlanetLayout["PlanetTopRight"].Update(Panels.SpacePanel());
+                }
+
+                return PlanetLayout;
+        }
+}
 
 public static class Panels
 {
@@ -1305,6 +1336,66 @@ public static class Panels
 
                 return GammaForcedEvent2;
         }
+
+        public static Panel OrigoPlanetPanel() {
+                var OrigoPlanetPanel = new Panel(StringsStuff.OrigoPlanetPanelString);
+
+                OrigoPlanetPanel.Width = 71;
+                OrigoPlanetPanel.Height = 16;
+                OrigoPlanetPanel.Header = new PanelHeader(" Planet : Origo ");
+
+                return OrigoPlanetPanel;
+        }
+
+        public static Panel PrimarisPlanetPanel() {
+                var PrimarisPlanetPanel = new Panel(StringsStuff.PrimarisPlanetPanelString);
+
+                PrimarisPlanetPanel.Width = 71;
+                PrimarisPlanetPanel.Height = 16;
+                PrimarisPlanetPanel.Header = new PanelHeader(" Planet : Primaris ");
+
+                return PrimarisPlanetPanel;
+        }
+
+        public static Panel SterilisPlanetPanel() {
+                var SterilisPlanetPanel = new Panel(StringsStuff.SterilisPlanetPanelString);
+
+                SterilisPlanetPanel.Width = 71;
+                SterilisPlanetPanel.Height = 16;
+                SterilisPlanetPanel.Header = new PanelHeader(" Planet : Sterilis ");
+
+                return SterilisPlanetPanel;
+        }
+
+        public static Panel SpacePanel() {
+                var SpacePanel = new Panel(StringsStuff.SpacePanelString);
+
+                SpacePanel.Width = 71;
+                SpacePanel.Height = 16;
+                SpacePanel.Header = new PanelHeader(" Location : Space ");
+
+                return SpacePanel;
+        }
+
+        public static Panel PlanetUIChoice() {
+                var PlanetUIChoice = new Panel(StringsStuff.PlanetChoices);
+
+                PlanetUIChoice.Width = 141;
+                PlanetUIChoice.Height = 17;
+                PlanetUIChoice.Header = new PanelHeader(" Navigation Menu ");
+
+                return PlanetUIChoice;
+        }
+
+        public static Panel PlanetUIMap() {
+                var PlanetUIMap = new Panel(StringsStuff.SupposedMap);
+
+                PlanetUIMap.Width = 70;
+                PlanetUIMap.Height = 16;
+                PlanetUIMap.Header = new PanelHeader(" Navigation Menu : Map ");
+
+                return PlanetUIMap;
+        }
 }
 
 public static class Tables
@@ -1367,7 +1458,6 @@ public static class Tables
                 return UpgradeTable;
         }
 }
-
 
 public class ResourceBP
 {
@@ -1584,5 +1674,68 @@ public static class StringsStuff
 
         public static string EmptyEvent =>
         $"No event has happened yet."
+        ;
+
+        public static string PrimarisPlanetPanelString =>
+        $"[cyan]Primāris[/]\n" +
+        $"\n" +
+        $"A Planet Rich in Essence, Scriptures Dates back to 2099, when the first humans First discovered this Planet,\n" +
+        $"it is documented to have Uneven and rough terrain making factory production almost impossible, only Miners is unaffected\n" +
+        $"Scriptures document Structures like [red]&%#%## %#$#@[/] and [red]##%**%[/] Containing [red]#%##@@![/], Last Expidition Sent has not returned\n" +
+        $"Messages sent by the last team reports :[gray] @$@$!U@%*@ -HEL #@$@% IT'S GO*%#% TOW#%# US [/]" +
+        $"Expedition to structures is [red]not recommended[/]\n" +
+        $"\n" +
+        $"\n" +
+        $"Bonus Mining Productivity : [green]100%[/] \n" +
+        $"Bonus Factory Productivity : [red]-80%[/] \n"
+        ;
+
+        public static string SterilisPlanetPanelString =>
+        $"[gray]Sterelis[/]\n" +
+        $"\n" +
+        $"This Planet is not rich on any minable resources hence the name, however, it is known to have a Large open area and friendly climate that Greatly enhances Factory Production.\n This is a great Planet to setup a big Factory line!" +
+        $"\n" +
+        $"\n" +
+        $"Bonus Mining Productivity : [red]-90%[/] \n" +
+        $"Bonus Factory Productivity : [green]+80%[/] \n"
+        ;
+
+        public static string OrigoPlanetPanelString =>
+        $"[green]Origo[/]\n" +
+        $"\n" +
+        $"The only known data: Scripture from the old world (2006)\n" +
+        $"A rocky, terrestrial planet. A radius of around [red]@%##*[/], 70% of its\n" +
+        $"surface is covered with #&%#@*, and enveloped by [red]*#%@)[/] protecting it\n" +
+        $"from the harshness of space. It contains the material known as\n" +
+        $"'[red]@$@$(%)[/]'...\n" +
+        $"[bold]\"It is the only place to date, known to have life in the Universe.\"[/]\n" +
+        $"The rest is unreadable.\n" +
+        $"\n" +
+        $"Bonus Mining Productivity: [gray]0%[/]\n" +
+        $"Bonus Factory Productivity: [gray]0%[/]\n"
+        ;
+
+        public static string SupposedMap =>
+        $"Hi! Im map, I may now look like it right now, But Im trying my best!"
+        ;
+
+        public static string PlanetChoices =>
+        $"Known Planets : \n" +
+        $"\n" +
+        $" > Planets < \n" +
+        $"\n" +
+        $" > [green]Origo[/] ([green]Landed[/]) (1)\n" +
+        $" > [gray]Sterelis[/] ([red]Landed[/]) (2)\n" +
+        $" > [cyan]Primaris[/] ([red]Landed[/]) (3)\n"
+        ;
+
+        public static string SpacePanelString =>
+        $"[purple]Space[/]\n" +
+        $"\n" +
+        $"Its cold here.." +
+        $"No Life, Other than..Me..\n" +
+        $"\n" +
+        $"Bonus Mining Productivity: [red]-100%[/]\n" +
+        $"Bonus Factory Productivity: [red]-100%[/]\n"
         ;
 }
