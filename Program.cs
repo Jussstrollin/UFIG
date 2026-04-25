@@ -115,10 +115,12 @@ public static class Program
         public static ResourceBP BetaWallet = new ResourceBP(0.0f);
         public static ResourceBP GammaWallet = new ResourceBP(0.0f);
         public static ResourceBP EssenceWallet = new ResourceBP(1.0f);
-
-        public static FactoryStuff AlphaFactory = new FactoryStuff(Resources.Alpha, 1.0d, 0.0d, 0.0d, 1.0d);
-        public static FactoryStuff BetaFactory = new FactoryStuff(Resources.Beta, 1.0d, 0.0d, 0.0d, 1.0d);
-        public static FactoryStuff GammaFactory = new FactoryStuff(Resources.Gamma, 2.0d, 1.0d, 1.0d, 1.0d);
+        // magic nums : Alpha : 1 essence input
+        public static FactoryStuff AlphaFactory = new FactoryStuff(Resources.Alpha);
+        // Beta : 1 Alpha Input
+        public static FactoryStuff BetaFactory = new FactoryStuff(Resources.Beta);
+        // Gamma : 2 Essence, 1 Alpha, 1 Beta Input
+        public static FactoryStuff GammaFactory = new FactoryStuff(Resources.Gamma);
 
         public static UpgradeTrackBP UpgradeTrack = new UpgradeTrackBP { // Handles every Upgrades info, but cuurently does too much, will later detach Unrelated stuff
                 EssenceMiner = 1,
@@ -219,7 +221,7 @@ public static class Program
                                                         if (AlphaFactoryProgressIncrement <= 20) { // 2.0s
                                                                 AlphaFactoryProgressIncrement++; // it allows 16th yes, i dont care
                                                         } else if (AlphaFactoryProgressIncrement > 20) {
-                                                                AlphaFactory.FactoryCalc();
+                                                                AlphaFactory.RunFactory();
                                                                 AlphaFactoryProgressIncrement = 0;
                                                         }
                                                 }
@@ -230,7 +232,7 @@ public static class Program
                                                         if (BetaFactoryProgressIncrement <= 50) { // 5.0s
                                                                 BetaFactoryProgressIncrement++;
                                                         } else if (BetaFactoryProgressIncrement > 50) {
-                                                                BetaFactory.FactoryCalc();
+                                                                BetaFactory.RunFactory();
                                                                 BetaFactoryProgressIncrement = 0;
                                                         }
                                                 }
@@ -241,7 +243,7 @@ public static class Program
                                                         if (GammaFactoryProgressIncrement <= 80) { // 8.0s
                                                                 GammaFactoryProgressIncrement++;
                                                         } else if (GammaFactoryProgressIncrement > 80) {
-                                                                GammaFactory.FactoryCalc();
+                                                                GammaFactory.RunFactory();
                                                                 GammaFactoryProgressIncrement = 0;
                                                         }
                                                 }
@@ -284,57 +286,85 @@ public static class Program
         }
 
         public static string GetAlphaBar() {
+                // This uses a fixed-width, double-precision bar to prevent terminal layout flickering.
+                // Instead of changing the number of characters, it uses "▌" (half-block) to represent
+                // a subtler gradation inside a cell. The total width of the bar never changes,
+                // so the terminal doesn't need to recalculate the layout of the entire panel mid-frame.
                 if (UpgradeTrack.AlphaFactory == 0) return "";
 
-                int filled = (AlphaFactoryProgressIncrement * 10) / 20;
-                if (filled > 10) filled = 10;
+                const int barLength = 10;
+                double progress = (double)AlphaFactoryProgressIncrement / 20.0;
+                progress = Math.Clamp(progress, 0.0, 1.0);
 
-                string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "█";
-                for (int i = filled; i < 10; i++) bar += "▒";
-                bar += "}";
+                int totalHalfBlocks = (int)(progress * barLength * 2);
+                System.Text.StringBuilder bar = new System.Text.StringBuilder();
 
-                return bar;
+                for (int i = 0; i < barLength; i++) {
+                        int remainingHalfBlocks = totalHalfBlocks - (i * 2);
+                        if (remainingHalfBlocks >= 2) bar.Append('█');
+                        else if (remainingHalfBlocks == 1) bar.Append('▌');
+                        else bar.Append('▒');
+                }
+
+                return $"{{{bar}}}";
         }
 
         public static string GetBetaBar() {
                 if (UpgradeTrack.BetaFactory == 0) return "";
 
-                int filled = (BetaFactoryProgressIncrement * 10) / 50;
-                if (filled > 10) filled = 10;
+                const int barLength = 10;
+                double progress = (double)BetaFactoryProgressIncrement / 50.0;
+                progress = Math.Clamp(progress, 0.0, 1.0);
 
-                string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "█";
-                for (int i = filled; i < 10; i++) bar += "▒";
-                bar += "}";
+                int totalHalfBlocks = (int)(progress * barLength * 2);
+                System.Text.StringBuilder bar = new System.Text.StringBuilder();
 
-                return bar;
+                for (int i = 0; i < barLength; i++) {
+                        int remainingHalfBlocks = totalHalfBlocks - (i * 2);
+                        if (remainingHalfBlocks >= 2) bar.Append('█');
+                        else if (remainingHalfBlocks == 1) bar.Append('▌');
+                        else bar.Append('▒');
+                }
+
+                return $"{{{bar}}}";
         }
 
         public static string GetGammaBar() {
                 if (UpgradeTrack.GammaFactory == 0) return "";
 
-                int filled = (GammaFactoryProgressIncrement * 10) / 80;
-                if (filled > 10) filled = 10;
+                const int barLength = 10;
+                double progress = (double)GammaFactoryProgressIncrement / 80.0;
+                progress = Math.Clamp(progress, 0.0, 1.0);
 
-                string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "█";
-                for (int i = filled; i < 10; i++) bar += "▒";
-                bar += "}";
+                int totalHalfBlocks = (int)(progress * barLength * 2);
+                System.Text.StringBuilder bar = new System.Text.StringBuilder();
 
-                return bar;
+                for (int i = 0; i < barLength; i++) {
+                        int remainingHalfBlocks = totalHalfBlocks - (i * 2);
+                        if (remainingHalfBlocks >= 2) bar.Append('█');
+                        else if (remainingHalfBlocks == 1) bar.Append('▌');
+                        else bar.Append('▒');
+                }
+
+                return $"{{{bar}}}";
         }
 
         public static string GetEssenceBar() {
-                int filled = (EssenceMinerProgressIncrement * 10) / 30;
-                if (filled > 10) filled = 10;
+                const int barLength = 10;
+                double progress = (double)EssenceMinerProgressIncrement / 30.0;
+                progress = Math.Clamp(progress, 0.0, 1.0);
 
-                string bar = "{";
-                for (int i = 0; i < filled; i++) bar += "█";
-                for (int i = filled; i < 10; i++) bar += "▒";
-                bar += "}";
+                int totalHalfBlocks = (int)(progress * barLength * 2);
+                System.Text.StringBuilder bar = new System.Text.StringBuilder();
 
-                return bar;
+                for (int i = 0; i < barLength; i++) {
+                        int remainingHalfBlocks = totalHalfBlocks - (i * 2);
+                        if (remainingHalfBlocks >= 2) bar.Append('█');
+                        else if (remainingHalfBlocks == 1) bar.Append('▌');
+                        else bar.Append('▒');
+                }
+
+                return $"{{{bar}}}";
         }
 
         static void HandleEvents() {
@@ -748,17 +778,10 @@ public enum Resources {
 public class FactoryStuff
 {
         public Resources Resource { get; set; }
-        public double Input1ResourceBase { get; set; } // like 1 for 1 Essence per tick
-        public double Input2ResourceBase { get; set; }
-        public double Input3ResourceBase { get; set; }
-        public double OutputResourceBase { get; set; }
+        public string HaltReason { get; private set; } = ""; // a defualt value so C# wont cry bout it
 
-        public FactoryStuff(Resources Resource, double Input1ResourceBase, double Input2ResourceBase, double Input3ResourceBase, double OutputResourceBase) {
+        public FactoryStuff(Resources Resource) {
                 this.Resource = Resource;
-                this.Input1ResourceBase = Input1ResourceBase;
-                this.Input2ResourceBase = Input2ResourceBase;
-                this.Input3ResourceBase = Input3ResourceBase;
-                this.OutputResourceBase = OutputResourceBase;
         }
 
         // 5% Input reduction per upgrades boguht
@@ -766,162 +789,135 @@ public class FactoryStuff
         // 10% Bonus prod per upgrade Bought
         static double BonusProduction => 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
 
-        public bool InputCheck() {
-                bool Halt = false;
+        bool FactoryHalted = true;
 
-                if (this.Resource == Resources.Alpha) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory);
-
-                        if (ToDeduct > EssenceWallet.Amount || UpgradeTrack.AlphaFactory <= 0) {
-                                Halt = true;
-                                UpgradeTrack.AlphaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.AlphaFactoryStatus = true;
-                        }
-                }
-
-                if (this.Resource == Resources.Beta) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory);
-
-                        if (ToDeduct > AlphaWallet.Amount || UpgradeTrack.BetaFactory <= 0) {
-                                Halt = true;
-                                UpgradeTrack.BetaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.BetaFactoryStatus = true;
-                        }
-                }
-
-                if (this.Resource == Resources.Gamma) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        double ToDeduct2 = (this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        double ToDeduct3 = (this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        if (ToDeduct > EssenceWallet.Amount ||
-                                ToDeduct2 > AlphaWallet.Amount ||
-                                ToDeduct3 > BetaWallet.Amount ||
-                                UpgradeTrack.GammaFactory <= 0
-                        ) { // if any gets triggered, halt
-                                Halt = true;
-                                UpgradeTrack.GammaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.GammaFactoryStatus = true;
-                        }
-                }
-
-                if (Halt) {
-                        return false;
-                } else return true;
+        private (Resources[] InputTypes, double[] InputAmount) GetInputRequirements() { // takes Base Resources
+                return this.Resource switch {
+                        Resources.Alpha => (
+                                new Resources[] { Resources.Essence },
+                                new double[] { 1.0d }
+                        ),
+                        Resources.Beta => (
+                                new Resources[] { Resources.Alpha },
+                                new double[] { 1.0d }
+                        ),
+                        Resources.Gamma => (
+                                new Resources[] { Resources.Essence, Resources.Alpha, Resources.Beta },
+                                new double[] { 2.0d, 1.0d, 1.0d}
+                        ),
+                        _ => (new Resources[] {}, new double[] {})
+                };
         }
 
-        public void FactoryCalc() {
-                bool Halt = true;
+        // LookUp what this Factory Produces
+        private (Resources OutputResource, double OutputAmount) GetOutputs() {
+                return this.Resource switch { // what factor this is and Output then how many
+                        Resources.Alpha => (Resources.Alpha, 1.0d),
+                        Resources.Beta => (Resources.Beta, 1.0d),
+                        Resources.Gamma => (Resources.Gamma, 1.0d),
+                        _ => (Resources.Essence, 0.0d)
+                };
+        }
 
-                // Input check
-                if (this.Resource == Resources.Alpha) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.AlphaFactory) - (BonusInputReduction * UpgradeTrack.AlphaFactory);
+        // LookUp what Resource we have or rather, the user have. Based on the crap we need
+        private double GetResourceAmount(Resources Resource) {
+                return Resource switch {
+                        Resources.Essence => EssenceWallet.Amount,
+                        Resources.Alpha => AlphaWallet.Amount,
+                        Resources.Beta => BetaWallet.Amount,
+                        Resources.Gamma => GammaWallet.Amount,
+                        _ => 0.0d
+                };
+        }
 
-                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.AlphaFactory) * BonusProduction;
+        private int GetFactoryCount(Resources Resource) {
+                return Resource switch {
+                        Resources.Alpha => UpgradeTrack.AlphaFactory,
+                        Resources.Beta => UpgradeTrack.BetaFactory,
+                        Resources.Gamma => UpgradeTrack.GammaFactory,
+                        _ => 0
+                };
+        }
 
-                        if (ToDeduct > EssenceWallet.Amount && UpgradeTrack.AlphaFactory >= 1) {
-                                Halt = true;
-                                UpgradeTrack.AlphaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.AlphaFactoryStatus = true;
-                        }
-
-                        if (!Halt) {
-                                // Deduct
-                                Pending.Essence -= ToDeduct;
-                                // Apply
-                                Pending.Alpha += ToAdd;
-
-                                NetProd.Essence -= ToDeduct;
-                                NetProd.Alpha += ToAdd;
-                        } else return;
+        // Return False if Failed, and true if otherwise
+        public bool InputCheck() {
+                int FactoryAmount = GetFactoryCount(this.Resource);
+                if (FactoryAmount <= 0) {
+                        this.HaltReason = $"[gray]No Factory have been Purchased[/]";
+                        return false;
                 }
 
-                if (this.Resource == Resources.Beta) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.BetaFactory) - (BonusInputReduction * UpgradeTrack.BetaFactory);
+                var (InputTypes, InputAmount) = GetInputRequirements();
 
-                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.BetaFactory) * BonusProduction;
+                for (int i = 0; i < InputTypes.Length; i++) {
+                        double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
+                        double Available = GetResourceAmount(InputTypes[i]);
 
-                        if (ToDeduct > AlphaWallet.Amount && UpgradeTrack.BetaFactory >= 1) {
-                                Halt = true;
-                                UpgradeTrack.BetaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.BetaFactoryStatus = true;
-                        }
-
-                        if (!Halt) {
-                                // Deduct
-                                Pending.Alpha -= ToDeduct;
-                                // Apply
-                                Pending.Beta += ToAdd;
-
-                                NetProd.Alpha -= ToDeduct;
-                                NetProd.Beta += ToAdd;
-                        }
-                }
-
-                if (this.Resource == Resources.Gamma) {
-                        double ToDeduct = (this.Input1ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        double ToDeduct2 = (this.Input2ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        double ToDeduct3 = (this.Input3ResourceBase * UpgradeTrack.GammaFactory) - (BonusInputReduction * UpgradeTrack.GammaFactory);
-
-                        double ToAdd = (this.OutputResourceBase * UpgradeTrack.GammaFactory) * BonusProduction;
-
-                        if (ToDeduct > EssenceWallet.Amount ||
-                            ToDeduct2 > AlphaWallet.Amount ||
-                            ToDeduct3 > BetaWallet.Amount ||
-                            UpgradeTrack.GammaFactory <= 0
-                        ) { // if any gets triggered, halt
-                                Halt = true;
-                                UpgradeTrack.GammaFactoryStatus = false;
-                        } else {
-                                Halt = false;
-                                UpgradeTrack.GammaFactoryStatus = true;
-                        }
-
-                        if (!Halt) {
-                                // Deduct
-                                Pending.Essence -= ToDeduct;
-                                Pending.Alpha -= ToDeduct2;
-                                Pending.Beta -= ToDeduct3;
-                                // Apply
-                                Pending.Gamma += ToAdd;
-
-                                NetProd.Essence -= ToDeduct;
-                                NetProd.Alpha -= ToDeduct2;
-                                NetProd.Beta -= ToDeduct3;
-                                NetProd.Gamma += ToAdd;
+                        if (Needed > Available) {
+                                this.HaltReason = $"[red] Waiting for {InputTypes[i]}[/]";
+                                return false;
                         }
                 }
 
-                if (this.Resource == Resources.Alpha && Halt) {
-                        UpgradeTrack.AlphaFactoryStatus = false;
-                } else if (this.Resource == Resources.Alpha && !Halt) {
-                        UpgradeTrack.AlphaFactoryStatus = true;
-                } else if (this.Resource == Resources.Beta && Halt) {
-                        UpgradeTrack.BetaFactoryStatus = false;
-                } else if (this.Resource == Resources.Beta && !Halt) {
-                        UpgradeTrack.BetaFactoryStatus = true;
-                } else if (this.Resource == Resources.Gamma && Halt) {
-                        UpgradeTrack.GammaFactoryStatus = false;
-                } else if (this.Resource == Resources.Gamma && !Halt) {
-                        UpgradeTrack.GammaFactoryStatus = true;
-                }
+                return true;
+        }
 
-                PushPending();
-                WipePending();
+        public bool RunFactory() {
+                if (InputCheck()) {
+                        int FactoryAmount = GetFactoryCount(this.Resource);
+                        var (InputTypes, InputAmount) = GetInputRequirements();
+                        var (OutputResource, OutputAmount) = GetOutputs();
+
+                        // Deduct inputs (no planet bonus here, input cost is fixed)
+                        for (int i = 0; i < InputTypes.Length; i++) {
+                                double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
+
+                                // Deduct from pending based on resource type
+                                switch (InputTypes[i]) {
+                                        case Resources.Essence:
+                                                Pending.Essence -= Needed;
+                                                NetProd.Essence -= Needed;
+                                                break;
+                                        case Resources.Alpha:
+                                                Pending.Alpha -= Needed;
+                                                NetProd.Alpha -= Needed;
+                                                break;
+                                        case Resources.Beta:
+                                                Pending.Beta -= Needed;
+                                                NetProd.Beta -= Needed;
+                                                break;
+                                        case Resources.Gamma:
+                                                Pending.Gamma -= Needed;
+                                                NetProd.Gamma -= Needed;
+                                                break;
+                                }
+                        }
+
+                        // Calculate output with planet bonus AND production bonus
+                        double ToAdd = (OutputAmount * FactoryAmount) * BonusProduction * (1.0d + PlanetFactoryBonus);
+
+                        // Add output to pending
+                        switch (OutputResource) {
+                                case Resources.Alpha:
+                                        Pending.Alpha += ToAdd;
+                                        NetProd.Alpha += ToAdd;
+                                        break;
+                                case Resources.Beta:
+                                        Pending.Beta += ToAdd;
+                                        NetProd.Beta += ToAdd;
+                                        break;
+                                case Resources.Gamma:
+                                        Pending.Gamma += ToAdd;
+                                        NetProd.Gamma += ToAdd;
+                                        break;
+                        }
+
+                        // Push and wipe in same function
+                        PushPending();
+                        WipePending();
+                        return true;
+                }
+                return false;
         }
 }
 
@@ -1410,17 +1406,17 @@ public static class Tables
                 FactoryTable.AddRow(
                         "[yellow] Alpha [/]", // refer to Colums made
                         UpgradeTrack.AlphaFactory.ToString(),
-                                    UpgradeTrack.AlphaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                                    UpgradeTrack.AlphaFactoryStatus ? "[green]▶ Running [/]" : $"{AlphaFactory.HaltReason}"
                 );
                 FactoryTable.AddRow(
                         "[blue] Beta [/]",
                         UpgradeTrack.BetaFactory.ToString(),
-                                    UpgradeTrack.BetaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                                    UpgradeTrack.BetaFactoryStatus ? "[green]▶ Running [/]" : $"{BetaFactory.HaltReason}"
                 );
                 FactoryTable.AddRow(
                         "[green] Gamma [/]",
                         UpgradeTrack.GammaFactory.ToString(),
-                                    UpgradeTrack.GammaFactoryStatus ? "[green]▶ Running [/]" : "[red]■ Halted [/]"
+                                    UpgradeTrack.GammaFactoryStatus ? "[green]▶ Running [/]" : $"{GammaFactory.HaltReason}"
                 );
 
                 FactoryTable.Border = TableBorder.Rounded;
