@@ -4,6 +4,10 @@ using static Program;
 
 public static class StringsStuff
 {
+    private static void GenRandStringShop() {
+
+    }
+
     public static string GamePanelStats =>
     $"[white][/]\n" +
     $"[cyan]Essence : {EssenceWallet.Amount:F1}[/] | {NetProd.Essence.ToString("F2")} / sec | [cyan]{GetEssenceBar()}[/]\n" +
@@ -25,75 +29,89 @@ public static class StringsStuff
     ;
 
     public static string ShopMainPanel =>
-    $"Here, you can Buy more Factories, Essence Upgrades (and Factory upgrades in the future).\n" +
+    $"Random String here\n" +
+    $"\n" +
+    $"\n" +
+    $" > Factories | Press 1 to Open\n " +
+    $" > Upgrades | Press 2 to Open\n " +
+    $" > Miners | Press 3 to Open\n "
+    ;
+
+    public static string ShopCategoryFactory =>
+    $" Here, you can buy Factories to expand the production \n" +
     $"\n" +
     $"\n" +
     $" > Factories < \n" +
-    $"  -> [yellow] Alpha Factory [/] Press 1 to see\n" +
-    $"  -> [blue] Beta Factory [/] Press 2 to see\n" +
-    $"  -> [green] Gamma Factory [/] Press 3 to see\n" +
+    $" \n " +
+    $" [yellow]Alpha Factory[/] Press 1 to see\n" +
+    $" [blue] Beta Factory [/] Press 2 to see \n" +
+    $" [green] Gamma Factory [/] Press 3 to see \n"
+    ;
+
+    public static string ShopCategoryUpgrades =>
+    $" Here, you can buy Upgrades to Make you Factory more efficient \n" +
     $"\n" +
     $"\n" +
-    $" > [blue]Essence[/] Upgrades < \n" +
-    $"\n" +
-    $" -> [cyan]Essence Base Production[/] Press 4 to see\n" +
-    $" -> [cyan]Essence Multiplier[/] Press 5 to see\n" +
-    $"\n" +
-    $"\n" +
-    $" > Factory Upgrade < \n" +
-    $"\n" +
-    $" -> [purple]Make Factory input system safer[/] Press 6 to see \n" +
-    $" -> [purple]Make Factory Production line Smarter Press[/] 7 to see \n" +
+    $" > Upgrades < \n" +
+    $" \n " +
+    $" [purple]Factory Input Upgrades[/] Press 1 to see\n" +
+    $" [purple]Factory Output Upgrades[/] Press 2 to see \n" +
+    $" [cyan]Essence Miner Base Production Upgrade[/] Press 3 to see \n" +
+    $" [cyan]essence Miner Multiplier Upgrade[/] Press 4 to see"
+    ;
+
+    public static string ShopCategoryMiners =>
+    $" Here, you can buy Miners that extract the planets Resource \n" +
     $"\n" +
     $"\n" +
     $" > Miners < \n" +
-    $"\n" +
-    $" -> [cyan] Essence Miner [/] Press 8 to see \n "
+    $" \n " +
+    $" [cyan]Essence Miner[/] Press 1 to see\n"
     ;
 
-    public static string ShopEntryPanel1 =>
+    public static string ShopAlphaFactoryPanel =>
     $"[yellow] Alpha Factory [/]\n" +
     $"\n" +
     $"Description : \n" +
     $" - A factory that Consumes [cyan]1 Essence[/] to produce [yellow]1 Alpha[/] Per tick.\n" +
     $"\n" +
-    $"Cost : [cyan]{UpgradeTrack.AlphaFactoryCost}[/]\n" +
+    $"Cost : [cyan]{Structure.AlphaFactoryCost}[/]\n" +
     $"" +
-    $"You currently have : [yellow]{UpgradeTrack.AlphaFactory}[/] Factories\n" +
+    $"You currently have : [yellow]{Structure.AlphaFactory}[/] Factories\n" +
     $"\n" +
     $"Press ENTER to Purchase\n" +
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel2 =>
+    public static string ShopBetaFactoryPanel =>
     $"[blue] Beta Factory [/]\n" +
     $"\n" +
     $"Description : \n" +
     $" - A factory that Consumes [yellow]1 Alpha[/] to produce [blue]1 Beta[/] Per tick.\n" +
     $"\n" +
-    $"Cost : [cyan]{UpgradeTrack.BetaFactoryCost}[/]\n" +
+    $"Cost : [cyan]{Structure.BetaFactoryCost}[/]\n" +
     $"" +
-    $"You currently have : [blue]{UpgradeTrack.BetaFactory}[/] Factories\n" +
+    $"You currently have : [blue]{Structure.BetaFactory}[/] Factories\n" +
     $"\n" +
     $"Press ENTER to Purchase\n" +
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel3 =>
+    public static string ShopGammaFactoryPanel =>
     $"[green] Gamma Factory [/]\n" +
     $"\n" +
     $"Description : \n" +
     $" - A factory that Consumes [yellow]1 Alpha[/] and [blue]1 Beta [/]to produce [green]1 Gamma[/] Per tick.\n" +
     $"\n" +
-    $"Cost : [cyan]{UpgradeTrack.GammaFactoryCost}[/]\n" +
+    $"Cost : [cyan]{Structure.GammaFactoryCost}[/]\n" +
     $"" +
-    $"You currently have : [green]{UpgradeTrack.GammaFactory}[/] Factories\n" +
+    $"You currently have : [green]{Structure.GammaFactory}[/] Factories\n" +
     $"\n" +
     $"Press ENTER to Purchase\n" +
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel4 =>
+    public static string ShopEssenceBaseProductionPanel =>
     $"[cyan] Essence Base Production [/]\n" +
     $"\n" +
     $"Description : \n" +
@@ -107,7 +125,7 @@ public static class StringsStuff
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel5 =>
+    public static string ShopEssenceMultiplierPanel =>
     $"[cyan] Essence Multiplier [/]\n" +
     $"\n" +
     $"Description : \n" +
@@ -121,7 +139,7 @@ public static class StringsStuff
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel6 =>
+    public static string ShopFactoryInputUpgradePanel =>
     $"[purple] Factory Input mechanism [/]\n" +
     $"\n" +
     $"Description : \n" +
@@ -135,7 +153,7 @@ public static class StringsStuff
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel7 =>
+    public static string ShopFactoryOutputUpgradePanel =>
     $"[purple] Factory Line Performance Optimisation [/]\n" +
     $"\n" +
     $"Description : \n" +
@@ -149,15 +167,15 @@ public static class StringsStuff
     $"Press B to Go back\n"
     ;
 
-    public static string ShopEntryPanel8 =>
+    public static string ShopEssenceMiner =>
     $"[cyan] Essence Miner [/]\n" +
     $"\n" +
     $"Description : \n" +
     $" - An Essence Miner, To mine the Mysterious Material [cyan]'Essence'[/], said to have an unknown origin, but is the Base Material in Synthesizing Alpha.\n" +
     $"\n" +
-    $"Cost : [yellow]{UpgradeTrack.EssenceMinerCost} Alpha[/]\n" +
+    $"Cost : [yellow]{Structure.EssenceMinerCost} Alpha[/]\n" +
     $"" +
-    $"You currently have : [cyan]{UpgradeTrack.EssenceMiner} Miners Bought[/]\n" +
+    $"You currently have : [cyan]{Structure.EssenceMiner} Miners Bought[/]\n" +
     $"\n" +
     $"Press ENTER to Purchase\n" +
     $"Press B to Go back\n"

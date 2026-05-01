@@ -16,20 +16,49 @@ public static class Panels
 
     public static Panel ShopBuildEntryPanel(int panel) {
         Panel entry = panel switch {
-            1 => new Panel(StringsStuff.ShopEntryPanel1),
-            2 => new Panel(StringsStuff.ShopEntryPanel2),
-            3 => new Panel(StringsStuff.ShopEntryPanel3),
-            4 => new Panel(StringsStuff.ShopEntryPanel4),
-            5 => new Panel(StringsStuff.ShopEntryPanel5),
-            6 => new Panel(StringsStuff.ShopEntryPanel6),
-            7 => new Panel(StringsStuff.ShopEntryPanel7),
-            8 => new Panel(StringsStuff.ShopEntryPanel8),
+            1 => new Panel(StringsStuff.ShopAlphaFactoryPanel),
+            2 => new Panel(StringsStuff.ShopBetaFactoryPanel),
+            3 => new Panel(StringsStuff.ShopGammaFactoryPanel),
+            4 => new Panel(StringsStuff.ShopEssenceBaseProductionPanel),
+            5 => new Panel(StringsStuff.ShopEssenceMultiplierPanel),
+            6 => new Panel(StringsStuff.ShopFactoryInputUpgradePanel),
+            7 => new Panel(StringsStuff.ShopFactoryOutputUpgradePanel),
+            8  => new Panel(StringsStuff.ShopEssenceMiner),
             _ => new Panel("No entry chosen")
         };
 
         entry.Width = 71;
         entry.Height = 16;
-        entry.Header = new PanelHeader($" Shop Menu : Entry {panel}");
+
+        switch (panel) {
+            case 1 :
+                entry.Header = new PanelHeader( $" Shop : [yellow]Alpha[/] Factory ");
+                break;
+            case 2 :
+                entry.Header = new PanelHeader( $" Shop : [blue]Beta[/] Factory ");
+                break;
+            case 3 :
+                entry.Header = new PanelHeader( $" Shop : [green]Gamma[/] Factory  ");
+                break;
+            case 4 :
+                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Base Production[/] ");
+                break;
+            case 5 :
+                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Multiplier[/] ");
+                break;
+            case 6 :
+                entry.Header = new PanelHeader( $" Shop : [purple]Factoruy Input Upgrade[/] ");
+                break;
+            case 7 :
+                entry.Header = new PanelHeader( $" Shop : [purple]Factory Output Upgrade[/] ");
+                break;
+            case 8 :
+                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Miner[/] ");
+                break;
+            default :
+                entry.Header = new PanelHeader( $" Shop : [red]UNKNOWN MENU! REPORT HOW YOU GOT HERE[/] ");
+                break;
+        }
 
         return entry;
     }
@@ -45,14 +74,37 @@ public static class Panels
         return DaResult;
     }
 
-    public static Panel ShopBuildShopMenu() {
-        var ShopMenu = new Panel(StringsStuff.ShopMainPanel);
+    public static Panel ShopBuildShopMenu(int CategoryPanel) {
+        Panel Entry = CategoryPanel switch {
+            0 => new Panel(StringsStuff.ShopMainPanel),
+            1 => new Panel(StringsStuff.ShopCategoryFactory),
+            2 => new Panel(StringsStuff.ShopCategoryUpgrades),
+            3 => new Panel(StringsStuff.ShopCategoryMiners),
+            _ => new Panel("[red]ERROR! ShopMainPanel NOT RECOGNIZED, REPORT HOW YOU GOT HERE[/]")
+        };
 
-        ShopMenu.Header = new PanelHeader(" Shop Menu ");
-        ShopMenu.Width = 67;
-        ShopMenu.Height = 32;
+        Entry.Width = 67;
+        Entry.Height = 32;
 
-        return ShopMenu;
+        switch (CategoryPanel) {
+            case 0 :
+                Entry.Header = new PanelHeader($" Shop : Main Panel");
+                break;
+            case 1 :
+                Entry.Header = new PanelHeader($" Shop : Factory ");
+                break;
+            case 2 :
+                Entry.Header = new PanelHeader($" Shop : Upgrades");
+                break;
+            case 3 :
+                Entry.Header = new PanelHeader($" Shop : Miners");
+                break;
+            default :
+                Entry.Header = new PanelHeader($"[red]UNKNOWN MENU[/]");
+                break;
+        }
+
+        return Entry;
     }
 
     public static Panel EmptyEvent() {

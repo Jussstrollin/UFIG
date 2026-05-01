@@ -14,17 +14,17 @@ public static class Tables
 
         FactoryTable.AddRow(
             "[yellow] Alpha [/]", // refer to Colums made
-            UpgradeTrack.AlphaFactory.ToString(),
+            Structure.AlphaFactory.ToString(),
                             AlphaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{AlphaFactory.HaltReason}"
         );
         FactoryTable.AddRow(
             "[blue] Beta [/]",
-            UpgradeTrack.BetaFactory.ToString(),
+            Structure.BetaFactory.ToString(),
                             BetaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{BetaFactory.HaltReason}"
         );
         FactoryTable.AddRow(
             "[green] Gamma [/]",
-            UpgradeTrack.GammaFactory.ToString(),
+            Structure.GammaFactory.ToString(),
                             GammaFactory.InputCheck() ? "[green]▶ Running [/]" : $"{GammaFactory.HaltReason}"
         );
 

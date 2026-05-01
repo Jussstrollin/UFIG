@@ -59,9 +59,9 @@ public class FactoryStuff
 
     private int GetFactoryCount(Resources Resource) {
         return Resource switch {
-            Resources.Alpha => UpgradeTrack.AlphaFactory,
-            Resources.Beta => UpgradeTrack.BetaFactory,
-            Resources.Gamma => UpgradeTrack.GammaFactory,
+            Resources.Alpha => Structure.AlphaFactory,
+            Resources.Beta => Structure.BetaFactory,
+            Resources.Gamma => Structure.GammaFactory,
             _ => 0
         };
     }

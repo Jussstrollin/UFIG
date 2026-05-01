@@ -69,24 +69,79 @@ public class ShopUI
                       )
         );
 
-        ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu());
-        ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
+        bool InFactoryCategory = ( (int)GameState.MenuID >=  100 && (int)GameState.MenuID <=  109);
+        bool InMinersCategory = ( (int)GameState.MenuID >=  110 && (int)GameState.MenuID <=  119);
+        bool InUgradesCategory = ( (int)GameState.MenuID >=  120 && (int)GameState.MenuID <=  129);
+        bool InShopMain = (GameState.MenuID == Menu.ShopNoEntry);
 
-        if (GameState.MenuID != Menu.Game && GameState.MenuID != Menu.ExitMenu) {
-            int Entry = GameState.MenuID switch {
-                Menu.ShopEntry1 => 1,
-                Menu.ShopEntry2 => 2,
-                Menu.ShopEntry3 => 3,
-                Menu.ShopEntry4 => 4,
-                Menu.ShopEntry5 => 5,
-                Menu.ShopEntry6 => 6,
-                Menu.ShopEntry7 => 7,
-                Menu.ShopEntry8 => 8,
-                _ => 0
-            };
-
-            ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(Entry));
+        if (InShopMain) {
+            ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(0));
+            ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
         }
+
+        if (InFactoryCategory) {
+
+            ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(1));
+
+            if (GameState.MenuID == Menu.ShopAlphaFactoryPage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(1));
+            } else if (GameState.MenuID == Menu.ShopBetaFactoryPage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(2));
+            } else if (GameState.MenuID == Menu.ShopGammaFactoryPage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(3));
+            } else {
+                ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
+            }
+        }
+
+        if (InUgradesCategory) {
+            ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(2));
+
+            if (GameState.MenuID == Menu.ShopFactoryInputUpgradePage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(6)); // Input = 6
+            } else if (GameState.MenuID == Menu.ShopFactoryOutputUpgradePage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(7)); // Output = 7
+            } else if (GameState.MenuID == Menu.ShopEssenceBaseUpgradePage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(4));
+            } else if (GameState.MenuID == Menu.ShopEssenceMultiplierUpgradePage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(5));
+            }  else {
+                ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
+            }
+        }
+
+        if (InMinersCategory) {
+            ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(3));
+
+            if (GameState.MenuID == Menu.ShopEssenceMinerPage) {
+                ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(8));
+            } else {
+                ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
+            }
+        }
+
+        // if ((int)GameState.MenuID >= 99 && (int)GameState.MenuID <= 199) {
+        //     int CategoryEntry = GameState.MenuID switch {
+        //         Menu.ShopNoEntry => 0,
+        //         Menu.ShopCategoryFactories => 1,
+        //         Menu.ShopCategoryUpgrades => 2,
+        //         Menu.ShopCategoryMine => 3,
+        //         _ => -1
+        //     };
+        //
+        //     int Entry = GameState.MenuID switch {
+        //         Menu.ShopAlphaFactoryPage => 1,
+        //         Menu.ShopBetaFactoryPage => 2,
+        //         Menu.ShopGammaFactoryPage => 3,
+        //         Menu.ShopEssenceBaseUpgradePage => 4,
+        //         Menu.ShopEssenceMultiplierUpgradePage => 5,
+        //         Menu.ShopFactoryInputUpgradePage => 6,
+        //         Menu.ShopFactoryOutputUpgradePage => 7,
+        //         Menu.ShopEssenceMinerPage => 8,
+        //         _ => -1
+        //     };
+
+        ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
 
         if (GameState.MenuID == Menu.ShopFeedBackSuccess) {
             ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(0)); // success
@@ -97,7 +152,6 @@ public class ShopUI
         }
 
         return ShopLayout;
-
     }
 }
 
