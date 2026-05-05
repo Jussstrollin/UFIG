@@ -4,9 +4,7 @@ using static Program;
 
 public static class StringsStuff
 {
-    private static void GenRandStringShop() {
 
-    }
 
     public static string GamePanelStats =>
     $"[white][/]\n" +
