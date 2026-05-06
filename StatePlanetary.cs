@@ -26,7 +26,7 @@ public class StatePlanetary : StateInterface {
 
     public void HandleControls(char Key) {
         if (Key == '1') GameState.MenuID = Menu.PlanetUiOrigo;
-        if (Key == '2') GameState.MenuID = Menu.PlanetUiPrimaris;
+        if (Key == '2') GameState.MenuID = Menu.PlanetUiSterelis;
         if (Key == '3') GameState.MenuID = Menu.PlanetUiPrimaris;
     }
 

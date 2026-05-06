@@ -27,10 +27,6 @@ public class StatePlaying : StateInterface {
         }
     }
 
-    public enum ToExecute {
-
-    }
-
     public void HandleControls(char key) {
         return; // No function to really do here
     }

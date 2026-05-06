@@ -265,7 +265,7 @@ public static class Program {
         PlanetaryStateInstance = new StatePlanetary();
 
         // Set Default StartingState
-        CurrentState = ShopStateInstance;
+        CurrentState = PlayingStateInstance;
         CurrentState.GoingIn(); // Start Enter Sequence
 
         while (!GameState.Stop) {
@@ -275,7 +275,12 @@ public static class Program {
             if (Console.KeyAvailable) {
                 var Key = Console.ReadKey(true).KeyChar;
 
+                // These Guys need to be checked if they return true, so if key is accepted, it wont continue to the Current.HandleKeys
                 if (CheckExit(Key)) {
+                    continue;
+                }
+
+                if (StateHub(Key)) {
                     continue;
                 }
 
@@ -308,6 +313,8 @@ public static class Program {
 
         CurrentState = ToGoTo switch {
             States.StatePlaying => PlayingStateInstance,
+            States.StateShop => ShopStateInstance,
+            States.StatePlanetary => PlanetaryStateInstance,
             _ => CurrentState
         };
 
@@ -534,6 +541,23 @@ public static class Program {
 
             return true;
         }
+        return false;
+    }
+
+    static bool StateHub(char Key) {
+        if (Key == 'G') {
+            GoToState(States.StatePlaying);
+            return true;
+        }
+        else if (Key == 'S') {
+            GoToState(States.StateShop);
+            return true;
+        }
+        else if (Key == 'N') {
+            GoToState(States.StatePlanetary);
+            return true;
+        }
+
         return false;
     }
 }
