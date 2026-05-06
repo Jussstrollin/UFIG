@@ -30,6 +30,8 @@ public static class Program {
 
     public static StateInterface CurrentState;
     public static StateInterface PlayingStateInstance;
+    public static StateInterface ShopStateInstance;
+    public static StateInterface PlanetaryStateInstance;
 
     // lowest -0.99, highest 1.0
     public static double PlanetMiningBonus = 0.0d;
@@ -255,21 +257,29 @@ public static class Program {
     static void Main() {
         Console.Clear();
         AnsiConsole.Clear();
-        DateTime now = DateTime.Now;
-
         Load();
 
         // Assign them
         PlayingStateInstance = new StatePlaying();
+        ShopStateInstance = new StateShop();
+        PlanetaryStateInstance = new StatePlanetary();
 
         // Set Default StartingState
-        CurrentState = PlayingStateInstance;
+        CurrentState = ShopStateInstance;
         CurrentState.GoingIn(); // Start Enter Sequence
 
-        while (!GameState.Stop) { // while stop == false, loop
+        while (!GameState.Stop) {
+            DateTime now = DateTime.Now;
+
+            // while stop == false, loop
             if (Console.KeyAvailable) {
                 var Key = Console.ReadKey(true).KeyChar;
-                HandleInput(Key);
+
+                if (CheckExit(Key)) {
+                    continue;
+                }
+
+                CurrentState.HandleControls(Key);
             }
 
             if ((now - LastGameTick).TotalSeconds >= 1.0) {
@@ -281,15 +291,14 @@ public static class Program {
                 PauseHandler();
                 LastGameTick = now;
             }
-        }
 
-        if ((now - LastDisplayTick).TotalSeconds >= 0.1) {
-            HandleDisplay();
-            LastDisplayTick = now;
-        }
+            if ((now - LastDisplayTick).TotalSeconds >= 0.1) {
+                CurrentState.Display();
+                LastDisplayTick = now;
+            }
 
-        CurrentState.Update();
-        CurrentState.Display();
+            CurrentState.Update();
+        }
 
         Thread.Sleep(10);
     }
@@ -428,144 +437,6 @@ public static class Program {
         Pending.Essence = 0;
     }
 
-    enum ToBuy {
-        EssenceMiner,
-
-        AlphaFactory,
-        BetaFactory,
-        GammaFactory,
-
-        EssenceBase,
-        EssenceMultiplier,
-
-        FactoryInputUpgrade,
-        FactoryOutputUpgrade,
-
-        CrudeFuel,
-        StandardFuel,
-        RefinedFuel
-    }
-
-    static int WannaBuy(ToBuy Upgrade) {
-        if (Upgrade == ToBuy.EssenceMiner) {
-            if (AlphaWallet.Amount >= Structure.EssenceMinerCost) {
-                AlphaWallet.Amount -= Structure.EssenceMinerCost;
-                Structure.EssenceMiner++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.AlphaFactory) {
-            if (EssenceWallet.Amount >= Structure.AlphaFactoryCost) { // afford
-                EssenceWallet.Amount -= Structure.AlphaFactoryCost;
-                Structure.AlphaFactory++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.BetaFactory) {
-            if (EssenceWallet.Amount >= Structure.BetaFactoryCost) { // afford
-                EssenceWallet.Amount -= Structure.BetaFactoryCost;
-                Structure.BetaFactory++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.GammaFactory) {
-            if (EssenceWallet.Amount >= Structure.GammaFactoryCost) { // afford
-                EssenceWallet.Amount -= Structure.GammaFactoryCost;
-                Structure.GammaFactory++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.EssenceBase) {
-            if (AlphaWallet.Amount >= UpgradeTrack.EssenceBaseCost) {
-                AlphaWallet.Amount -= UpgradeTrack.EssenceBaseCost;
-                UpgradeTrack.EssenceBaseBought++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.EssenceMultiplier) {
-            if (BetaWallet.Amount >= UpgradeTrack.EssenceMultiplierCost) {
-                BetaWallet.Amount -= UpgradeTrack.EssenceMultiplierCost;
-                UpgradeTrack.EssenceMultiplierBought++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.FactoryInputUpgrade) {
-            if (GammaWallet.Amount >= UpgradeTrack.FactoryInputUpgradeCost) {
-                GammaWallet.Amount -= UpgradeTrack.FactoryInputUpgradeCost;
-                UpgradeTrack.FactoryInputUpgradeBought++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        if (Upgrade == ToBuy.FactoryOutputUpgrade) {
-            if (GammaWallet.Amount >= UpgradeTrack.FactoryOutputUpgradeCost) {
-                GammaWallet.Amount -= UpgradeTrack.FactoryOutputUpgradeCost;
-                UpgradeTrack.FactoryOutputUpgradeBought++;
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        }
-
-        return -1; // some wierd happened
-    }
-
-    static void HandleDisplay() {
-        int TerminalWidth = Console.WindowWidth;
-        int TerminalHeight = Console.WindowHeight;
-
-        var GameUi = new GameUI();
-        var ShopUi = new ShopUI();
-        var PlanetUi = new PlanetUI();
-
-        if (GameState.MenuID == Menu.ExitMenu) {
-            ExitSequence();
-        }
-        else if (GameState.MenuID == Menu.PlanetUiSpace ||
-                GameState.MenuID == Menu.PlanetUiOrigo ||
-                GameState.MenuID == Menu.PlanetUiPrimaris ||
-                GameState.MenuID == Menu.PlanetUiSterelis
-        ) {
-            AnsiConsole.Write(PlanetUi.ShowPlanetUI());
-        }
-        else if (GameState.MenuID != Menu.Game &&
-                GameState.MenuID != Menu.ExitMenu &&
-                GameState.MenuID != Menu.PlanetUiSpace &&
-                GameState.MenuID != Menu.PlanetUiOrigo &&
-                GameState.MenuID != Menu.PlanetUiPrimaris &&
-                GameState.MenuID != Menu.PlanetUiSterelis) {
-            AnsiConsole.Write(ShopUi.ShopMenuLayout());
-        }
-    }
-
     static void Save() {
         var ToBeSaved = new {
             Alpha = AlphaWallet.Amount,
@@ -642,158 +513,28 @@ public static class Program {
         Thread.Sleep(500);
     }
 
-    static void ExitSequence() {
-        AnsiConsole.Clear();
+    static bool CheckExit(char Key) {
+        if (Key == 'Q') {
+            AnsiConsole.Clear();
+
+            AnsiConsole.MarkupLine("Are you sure to Quit? [red]Y[/] / [green]N[/] ( a save will be made )");
+            GameState.MenuID = Menu.ExitMenu;
+            return true;
+        }
 
         if (GameState.MenuID == Menu.ExitMenu) {
-            AnsiConsole.MarkupLine("Are you sure to Quit? [red]Y[/] / [green]N[/] ( a save will be made )");
-        }
-
-    }
-
-    static void HandleInput(char Key) {
-        bool IsInGame = true; // default values
-        bool IsInShop = false;
-        bool IsInExit = false;
-        bool IsInPlanetaryMap = false;
-
-        if (GameState.MenuID == Menu.Game) {
-            IsInGame = true;
-            IsInShop = false;
-            IsInExit = false;
-            IsInPlanetaryMap = false;
-        }
-        else if ((int)GameState.MenuID >= 99 && (int)GameState.MenuID <= 199) {
-            IsInGame = false;
-            IsInShop = true;
-            IsInExit = false;
-            IsInPlanetaryMap = false;
-        }
-        else if (GameState.MenuID == Menu.ExitMenu) {
-            IsInGame = false;
-            IsInShop = false;
-            IsInExit = true;
-            IsInPlanetaryMap = false;
-        }
-        else if ((int)GameState.MenuID >= 200 && (int)GameState.MenuID <= 299) {
-            IsInGame = false;
-            IsInShop = false;
-            IsInExit = false;
-            IsInPlanetaryMap = true;
-        }
-        else {
-            AnsiConsole.MarkupLine($"[red]UNKNOWN MENU![/] Report to as Bug and Explain how you got here");
-        }
-
-        if (IsInGame || IsInShop || IsInPlanetaryMap) {
-            if (Key == 'S') GameState.MenuID = Menu.ShopNoEntry;
-            if (Key == 'G') GameState.MenuID = Menu.Game;
-            if (Key == 'N') {
-                GameState.MenuID = GameState.PlanetOn switch {
-                    Planet.Space => Menu.PlanetUiSpace,
-                    Planet.Origo => Menu.PlanetUiOrigo,
-                    Planet.Sterelis => Menu.PlanetUiSterelis,
-                    Planet.Primaris => Menu.PlanetUiPrimaris,
-                    _ => Menu.PlanetUiSpace
-                };
+            if (Key == 'Y') {
+                Save();
+                GameState.Stop = true;
             }
-        }
-
-        // ==== Shop Functions ==== //
-        if (IsInShop) {
-            int result = -1; // default on error
-
-            bool IsInFactories = ((int)GameState.MenuID >= 100 && (int)GameState.MenuID <= 109);
-            bool IsInUpgrades = ((int)GameState.MenuID >= 120 && (int)GameState.MenuID <= 129); // was 110-119
-            bool IsInMine = ((int)GameState.MenuID >= 110 && (int)GameState.MenuID <= 119); // was 120-129
-            bool IsInFeedback = ((int)GameState.MenuID >= 197 && (int)GameState.MenuID <= 199);
-            bool IsInShopMain = (GameState.MenuID == Menu.ShopNoEntry);
-
-            if (IsInShopMain) {
-                if (Key == '1') GameState.MenuID = Menu.ShopCategoryFactories;
-                if (Key == '2') GameState.MenuID = Menu.ShopCategoryUpgrades;
-                if (Key == '3') GameState.MenuID = Menu.ShopCategoryMine;
+            else if (Key == 'N') {
+                CurrentState.GoingIn();
+                GameState.Stop = false;
             }
 
-            // ShopGoBack from entry
-            if (IsInFactories) {
-                if (Key == 'B') GameState.MenuID = Menu.ShopCategoryFactories;
-            }
-            else if (IsInUpgrades) {
-                if (Key == 'B') GameState.MenuID = Menu.ShopCategoryUpgrades;
-            }
-            else if (IsInMine) {
-                if (Key == 'B') GameState.MenuID = Menu.ShopCategoryMine;
-            }
-
-            // Shop Go back from Category
-            if ((GameState.MenuID == Menu.ShopCategoryFactories ||
-                    GameState.MenuID == Menu.ShopCategoryUpgrades ||
-                    GameState.MenuID == Menu.ShopCategoryMine) && Key == 'B') {
-                GameState.MenuID = Menu.ShopNoEntry;
-            }
-
-            if (IsInFactories) {
-                if (Key == '1') GameState.MenuID = Menu.ShopAlphaFactoryPage;
-                if (Key == '2') GameState.MenuID = Menu.ShopBetaFactoryPage;
-                if (Key == '3') GameState.MenuID = Menu.ShopGammaFactoryPage;
-
-                if (Key == '\r') {
-                    if (GameState.MenuID == Menu.ShopAlphaFactoryPage) result = WannaBuy(ToBuy.AlphaFactory);
-                    if (GameState.MenuID == Menu.ShopBetaFactoryPage) result = WannaBuy(ToBuy.BetaFactory);
-                    if (GameState.MenuID == Menu.ShopGammaFactoryPage) result = WannaBuy(ToBuy.GammaFactory);
-                }
-            }
-
-            if (IsInUpgrades) {
-                if (Key == '1') GameState.MenuID = Menu.ShopFactoryInputUpgradePage;
-                if (Key == '2') GameState.MenuID = Menu.ShopFactoryOutputUpgradePage;
-                if (Key == '3') GameState.MenuID = Menu.ShopEssenceBaseUpgradePage;
-                if (Key == '4') GameState.MenuID = Menu.ShopEssenceMultiplierUpgradePage;
-
-                if (Key == '\r') {
-                    if (GameState.MenuID == Menu.ShopFactoryInputUpgradePage) result = WannaBuy(ToBuy.FactoryInputUpgrade);
-                    if (GameState.MenuID == Menu.ShopFactoryOutputUpgradePage) result = WannaBuy(ToBuy.FactoryOutputUpgrade);
-                    if (GameState.MenuID == Menu.ShopEssenceBaseUpgradePage) result = WannaBuy(ToBuy.EssenceBase);
-                    if (GameState.MenuID == Menu.ShopEssenceMultiplierUpgradePage) result = WannaBuy(ToBuy.EssenceMultiplier);
-                }
-            }
-
-            if (IsInMine) {
-                if (Key == '1') GameState.MenuID = Menu.ShopEssenceMinerPage;
-
-                if (Key == '\r') {
-                    if (GameState.MenuID == Menu.ShopEssenceMinerPage) result = WannaBuy(ToBuy.EssenceMiner);
-                }
-            }
+            return true;
         }
-
-
-
-        // PlanetaryMap
-
-        if (IsInPlanetaryMap) { // Switching Between Planet Descriptions
-            if (Key == '1') GameState.MenuID = Menu.PlanetUiOrigo;
-            if (Key == '2') GameState.MenuID = Menu.PlanetUiSterelis;
-            if (Key == '3') GameState.MenuID = Menu.PlanetUiPrimaris;
-        }
-
-
-        // Menu Stuff
-
-        if (Key == 'Q' || Key == 'q') {
-            GameState.Pause = true;
-            GameState.MenuID = Menu.ExitMenu;
-        } // Available Everywhere
-
-        if (GameState.MenuID == Menu.ExitMenu && Key == 'Y') {
-            Save();
-            GameState.Stop = true;
-        }
-        else if (GameState.MenuID == Menu.ExitMenu && Key == 'N') {
-            GameState.Stop = false;
-            GameState.MenuID = Menu.Game;
-        }
+        return false;
     }
 }
 

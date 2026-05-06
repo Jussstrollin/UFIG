@@ -7,6 +7,7 @@ using Spectre.Console;
 
 public class StatePlaying : StateInterface {
     public void GoingIn() {
+        AnsiConsole.Clear();
         GameState.MenuID = Menu.Game;
         ApplyPlanetBuffs();
         // Feel Free to add an Opening Seequence Here 
@@ -14,7 +15,8 @@ public class StatePlaying : StateInterface {
     }
 
     public void GoingOut() {
-
+        AnsiConsole.Clear();
+        return;
     }
 
     public void Display() {
