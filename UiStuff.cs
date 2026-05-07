@@ -4,10 +4,8 @@ using Spectre.Console;
 
 using static Program;
 
-public class GameUI
-{
-    public Layout InitGameLayout()
-    {
+public class GameUI {
+    public Layout InitGameLayout() {
         var GameLayout = new Layout("GameRoot")
         .SplitColumns(
             new Layout("GameLeft").SplitRows(
@@ -26,56 +24,43 @@ public class GameUI
         GameLayout["GameBottomRight"].Update(Tables.GameBuildUpgradeTable());
 
         int EventToShow = EventSystem.EventToShow;
-        if (EventToShow == 10)
-        { // no need for Checks, even system already handles the line
+        if (EventToShow == 10) { // no need for Checks, even system already handles the line
             GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent1());
         }
-        else if (EventToShow == 11)
-        {
+        else if (EventToShow == 11) {
             GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent2());
         }
-        else if (EventToShow == 12)
-        {
+        else if (EventToShow == 12) {
             GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent3());
         }
-        else if (EventToShow == 13)
-        {
+        else if (EventToShow == 13) {
             GameLayout["GameTopRight"].Update(Panels.AlphaForcedEvent4());
         }
-        else if (EventToShow == 20)
-        {
+        else if (EventToShow == 20) {
             GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent1());
         }
-        else if (EventToShow == 21)
-        {
+        else if (EventToShow == 21) {
             GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent2());
         }
-        else if (EventToShow == 22)
-        {
+        else if (EventToShow == 22) {
             GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent3());
         }
-        else if (EventToShow == 23)
-        {
+        else if (EventToShow == 23) {
             GameLayout["GameTopRight"].Update(Panels.BetaForcedEvent4());
         }
-        else if (EventToShow == 30)
-        {
+        else if (EventToShow == 30) {
             GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent1());
         }
-        else if (EventToShow == 31)
-        {
+        else if (EventToShow == 31) {
             GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent2());
         }
-        else if (EventToShow == 32)
-        {
+        else if (EventToShow == 32) {
             GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent3());
         }
-        else if (EventToShow == 33)
-        {
+        else if (EventToShow == 33) {
             GameLayout["GameTopRight"].Update(Panels.GammaForcedEvent4());
         }
-        else
-        {
+        else {
             GameLayout["GameTopRight"].Update(Panels.EmptyEvent());
         }
 
@@ -83,10 +68,8 @@ public class GameUI
     }
 }
 
-public class ShopUI
-{
-    public Layout ShopMenuLayout()
-    {
+public class ShopUI {
+    public Layout ShopMenuLayout() {
         var ShopLayout = new Layout("ShopRoot")
         .SplitColumns(
             new Layout("ShopLeft"), // 68W, 32H
@@ -101,71 +84,56 @@ public class ShopUI
         bool InUgradesCategory = ((int)GameState.MenuID >= 120 && (int)GameState.MenuID <= 129);
         bool InShopMain = (GameState.MenuID == Menu.ShopNoEntry);
 
-        if (InShopMain)
-        {
+        if (InShopMain) {
             ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(0));
             ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
         }
 
-        if (InFactoryCategory)
-        {
+        if (InFactoryCategory) {
 
             ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(1));
 
-            if (GameState.MenuID == Menu.ShopAlphaFactoryPage)
-            {
+            if (GameState.MenuID == Menu.ShopAlphaFactoryPage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(1));
             }
-            else if (GameState.MenuID == Menu.ShopBetaFactoryPage)
-            {
+            else if (GameState.MenuID == Menu.ShopBetaFactoryPage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(2));
             }
-            else if (GameState.MenuID == Menu.ShopGammaFactoryPage)
-            {
+            else if (GameState.MenuID == Menu.ShopGammaFactoryPage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(3));
             }
-            else
-            {
+            else {
                 ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
             }
         }
 
-        if (InUgradesCategory)
-        {
+        if (InUgradesCategory) {
             ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(2));
 
-            if (GameState.MenuID == Menu.ShopFactoryInputUpgradePage)
-            {
+            if (GameState.MenuID == Menu.ShopFactoryInputUpgradePage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(6)); // Input = 6
             }
-            else if (GameState.MenuID == Menu.ShopFactoryOutputUpgradePage)
-            {
+            else if (GameState.MenuID == Menu.ShopFactoryOutputUpgradePage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(7)); // Output = 7
             }
-            else if (GameState.MenuID == Menu.ShopEssenceBaseUpgradePage)
-            {
+            else if (GameState.MenuID == Menu.ShopEssenceBaseUpgradePage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(4));
             }
-            else if (GameState.MenuID == Menu.ShopEssenceMultiplierUpgradePage)
-            {
+            else if (GameState.MenuID == Menu.ShopEssenceMultiplierUpgradePage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(5));
             }
-            else
-            {
+            else {
                 ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
             }
         }
 
-        if (InMinersCategory)
-        {
+        if (InMinersCategory) {
             ShopLayout["ShopLeft"].Update(Panels.ShopBuildShopMenu(3));
 
-            if (GameState.MenuID == Menu.ShopEssenceMinerPage)
-            {
+            if (GameState.MenuID == Menu.ShopEssenceMinerPage) {
                 ShopLayout["ShopTopRight"].Update(Panels.ShopBuildEntryPanel(8));
             }
-            else
-            {
+            else {
                 ShopLayout["ShopTopRight"].Update(new Panel($"No Entry has been chosen yet"));
             }
         }
@@ -193,16 +161,13 @@ public class ShopUI
 
         ShopLayout["ShopBottomRight"].Update(Panels.BuildStatPanel());
 
-        if (GameState.MenuID == Menu.ShopFeedBackSuccess)
-        {
+        if (GameState.MenuID == Menu.ShopFeedBackSuccess) {
             ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(0)); // success
         }
-        else if (GameState.MenuID == Menu.ShopFeedBackRejected)
-        {
+        else if (GameState.MenuID == Menu.ShopFeedBackRejected) {
             ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(1)); // Fail cuz broke
         }
-        else if (GameState.MenuID == Menu.ShopFeedBackFailByError)
-        {
+        else if (GameState.MenuID == Menu.ShopFeedBackFailByError) {
             ShopLayout["ShopTopRight"].Update(Panels.ShopBuildBuyFeedback(2)); // Fail cuz broke
         }
 
@@ -210,38 +175,48 @@ public class ShopUI
     }
 }
 
-public class PlanetUI
-{
-    public Layout ShowPlanetUI()
-    {
+public class PlanetUI {
+    public Layout ShowPlanetUI() {
         var PlanetLayout = new Layout("PlanetRoot").SplitRows(
             new Layout("PlanetTop").SplitColumns(
                 new Layout("PlanetTopLeft"), // Something like a map
-                                                 new Layout("PlanetTopRight") // Chosen Planet Description
+                                                  new Layout("PlanetTopRight") // Chosen Planet Description
             ),
             new Layout("PlanetBottom") // Planet you can move to, and keybinds
         );
 
         PlanetLayout["PlanetTopLeft"].Update(Panels.PlanetUIMap());
-        PlanetLayout["PlanetBottom"].Update(Panels.PlanetUIChoice());
 
-        if (GameState.MenuID == Menu.PlanetUiOrigo)
-        {
+        if (GameState.MenuID == Menu.PlanetTravelChoice) {
+            PlanetLayout["PlanetBottom"].Update(Panels.PlanetUIChoice());
+        }
+        else if (GameState.MenuID == Menu.PlanetTravelConfirmationToOrigo) {
+            PlanetLayout["PlanetBottom"].Update(Panels.PlanetTravelConfirmationToOrigo());
+        }
+        else if (GameState.MenuID == Menu.PlanetTravelConfirmationToSterelis) {
+            PlanetLayout["PlanetBottom"].Update(Panels.PlanetTravelConfirmationToSterelis());
+        }
+        else if (GameState.MenuID == Menu.PlanetTravelConfirmationToPrimaris) {
+            PlanetLayout["PlanetBottom"].Update(Panels.PlanetTravelConfirmationToPrimaris());
+        }
+
+        if (GameState.MenuID == Menu.PlanetUiDescOrigo) {
             PlanetLayout["PlanetTopRight"].Update(Panels.OrigoPlanetPanel());
         }
-        else if (GameState.MenuID == Menu.PlanetUiSterelis)
-        {
+        else if (GameState.MenuID == Menu.PlanetUiDescSterelis) {
             PlanetLayout["PlanetTopRight"].Update(Panels.SterilisPlanetPanel());
         }
-        else if (GameState.MenuID == Menu.PlanetUiPrimaris)
-        {
+        else if (GameState.MenuID == Menu.PlanetUiDescPrimaris) {
             PlanetLayout["PlanetTopRight"].Update(Panels.PrimarisPlanetPanel());
         }
-        else if (GameState.MenuID == Menu.PlanetUiSpace)
-        {
+        else if (GameState.MenuID == Menu.PlanetUiDescSpace) {
             PlanetLayout["PlanetTopRight"].Update(Panels.SpacePanel());
         }
 
         return PlanetLayout;
+    }
+
+    public Layout ShowTravelUi {
+
     }
 }

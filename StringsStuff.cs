@@ -2,10 +2,7 @@ namespace UFIG;
 
 using static Program;
 
-public static class StringsStuff
-{
-
-
+public static class StringsStuff {
     public static string GamePanelStats =>
     $"[white][/]\n" +
     $"[cyan]Essence : {EssenceWallet.Amount:F1}[/] | {NetProd.Essence.ToString("F2")} / sec | [cyan]{GetEssenceBar()}[/]\n" +
@@ -317,6 +314,7 @@ public static class StringsStuff
     ;
 
     public static string PlanetChoices =>
+    $"Press ENTER to Travel to that Planet \n" +
     $"Known Planets : \n" +
     $"\n" +
     $" > Planets < \n" +
@@ -324,6 +322,21 @@ public static class StringsStuff
     $" > [green]Origo[/] ([green]Landed[/]) (1)\n" +
     $" > [gray]Sterelis[/] ([red]Landed[/]) (2)\n" +
     $" > [cyan]Primaris[/] ([red]Landed[/]) (3)\n"
+    ;
+
+    public static string PlanetTravelConfirmationToOrigo =>
+    $"Are you Sure to Travel to [green]Origo[/]?\n" +
+    $"[green] Yes (Y) [/] | [red] No (N) [/]"
+    ;
+
+    public static string PlanetTravelConfirmationToSterelis =>
+    $"Are you Sure to Travel to [gray]Sterelis[/]?\n" +
+    $"[green] Yes (Y) [/] | [red] No (N) [/]"
+    ;
+
+    public static string PlanetTravelConfirmationToPrimaris =>
+    $"Are you Sure to Travel to [cyan]Primaris[/]?\n" +
+    $"[green] Yes (Y) [/] | [red] No (N) [/]"
     ;
 
     public static string SpacePanelString =>

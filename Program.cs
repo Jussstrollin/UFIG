@@ -108,7 +108,7 @@ public static class Program {
 
         public double Percentage {
             get => _Percentage;
-            set => Math.Clamp(value, 0.0, 1.0);
+            set => Math.Clamp(value, 0.0, 100.0);
         } // Pls be kind and make all things that add to cap it to 1.0, or not, I dont care [AS]
 
         public FuelType FuelType;
@@ -226,11 +226,15 @@ public static class Program {
         ExitMenu = 900,
 
         // Planet related is 200-299
-        PlanetUiSpace = 200, // not on any Planet
-        PlanetUiOrigo = 201,
-        PlanetUiSterelis = 202,
-        PlanetUiPrimaris = 203,
-        PlanetTravelUI = 204
+        PlanetUiDescSpace = 200, // not on any Planet
+        PlanetUiDescOrigo = 201,
+        PlanetUiDescSterelis = 202,
+        PlanetUiDescPrimaris = 203,
+        PlanetTravelChoice = 204,
+        PlanetTravelConfirmationToOrigo = 205,
+        PlanetTravelConfirmationToSterelis = 206,
+        PlanetTravelConfirmationToPrimaris = 207,
+        PlanetTravellingUI = 208
     }
 
     public enum Planet {
@@ -244,7 +248,8 @@ public static class Program {
     public enum FuelType {
         CrudeFuel,
         StandardFuel,
-        RefinedFuel
+        RefinedFuel,
+        NULL
     }
 
     public enum Resources {

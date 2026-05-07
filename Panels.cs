@@ -2,8 +2,7 @@ namespace UFIG;
 
 using Spectre.Console;
 
-public static class Panels
-{
+public static class Panels {
     public static Panel BuildStatPanel() {
         // var "PanelName" = new Panel("string to use");
         var GameStatPanel = new Panel(StringsStuff.GamePanelStats);
@@ -23,7 +22,7 @@ public static class Panels
             5 => new Panel(StringsStuff.ShopEssenceMultiplierPanel),
             6 => new Panel(StringsStuff.ShopFactoryInputUpgradePanel),
             7 => new Panel(StringsStuff.ShopFactoryOutputUpgradePanel),
-            8  => new Panel(StringsStuff.ShopEssenceMiner),
+            8 => new Panel(StringsStuff.ShopEssenceMiner),
             _ => new Panel("No entry chosen")
         };
 
@@ -31,32 +30,32 @@ public static class Panels
         entry.Height = 16;
 
         switch (panel) {
-            case 1 :
-                entry.Header = new PanelHeader( $" Shop : [yellow]Alpha[/] Factory ");
+            case 1:
+                entry.Header = new PanelHeader($" Shop : [yellow]Alpha[/] Factory ");
                 break;
-            case 2 :
-                entry.Header = new PanelHeader( $" Shop : [blue]Beta[/] Factory ");
+            case 2:
+                entry.Header = new PanelHeader($" Shop : [blue]Beta[/] Factory ");
                 break;
-            case 3 :
-                entry.Header = new PanelHeader( $" Shop : [green]Gamma[/] Factory  ");
+            case 3:
+                entry.Header = new PanelHeader($" Shop : [green]Gamma[/] Factory  ");
                 break;
-            case 4 :
-                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Base Production[/] ");
+            case 4:
+                entry.Header = new PanelHeader($" Shop : [cyan]Essence Base Production[/] ");
                 break;
-            case 5 :
-                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Multiplier[/] ");
+            case 5:
+                entry.Header = new PanelHeader($" Shop : [cyan]Essence Multiplier[/] ");
                 break;
-            case 6 :
-                entry.Header = new PanelHeader( $" Shop : [purple]Factoruy Input Upgrade[/] ");
+            case 6:
+                entry.Header = new PanelHeader($" Shop : [purple]Factoruy Input Upgrade[/] ");
                 break;
-            case 7 :
-                entry.Header = new PanelHeader( $" Shop : [purple]Factory Output Upgrade[/] ");
+            case 7:
+                entry.Header = new PanelHeader($" Shop : [purple]Factory Output Upgrade[/] ");
                 break;
-            case 8 :
-                entry.Header = new PanelHeader( $" Shop : [cyan]Essence Miner[/] ");
+            case 8:
+                entry.Header = new PanelHeader($" Shop : [cyan]Essence Miner[/] ");
                 break;
-            default :
-                entry.Header = new PanelHeader( $" Shop : [red]UNKNOWN MENU! REPORT HOW YOU GOT HERE[/] ");
+            default:
+                entry.Header = new PanelHeader($" Shop : [red]UNKNOWN MENU! REPORT HOW YOU GOT HERE[/] ");
                 break;
         }
 
@@ -87,19 +86,19 @@ public static class Panels
         Entry.Height = 32;
 
         switch (CategoryPanel) {
-            case 0 :
+            case 0:
                 Entry.Header = new PanelHeader($" Shop : Main Panel");
                 break;
-            case 1 :
+            case 1:
                 Entry.Header = new PanelHeader($" Shop : Factory ");
                 break;
-            case 2 :
+            case 2:
                 Entry.Header = new PanelHeader($" Shop : Upgrades");
                 break;
-            case 3 :
+            case 3:
                 Entry.Header = new PanelHeader($" Shop : Miners");
                 break;
-            default :
+            default:
                 Entry.Header = new PanelHeader($"[red]UNKNOWN MENU[/]");
                 break;
         }
@@ -279,14 +278,47 @@ public static class Panels
         return SpacePanel;
     }
 
+    private const int PlanetUIChoiceWidth = 141;
+    private const int PlayerUIChoiceHeight = 17;
+
     public static Panel PlanetUIChoice() {
         var PlanetUIChoice = new Panel(StringsStuff.PlanetChoices);
 
-        PlanetUIChoice.Width = 141;
-        PlanetUIChoice.Height = 17;
+        PlanetUIChoice.Width = PlanetUIChoiceWidth;
+        PlanetUIChoice.Height = PlayerUIChoiceHeight;
         PlanetUIChoice.Header = new PanelHeader(" Navigation Menu ");
 
         return PlanetUIChoice;
+    }
+
+    public static Panel PlanetTravelConfirmationToOrigo() {
+        var PlanetUIConfirmationToOrigo = new Panel(StringsStuff.PlanetTravelConfirmationToOrigo);
+
+        PlanetUIConfirmationToOrigo.Width = PlanetUIChoiceWidth;
+        PlanetUIConfirmationToOrigo.Height = PlayerUIChoiceHeight;
+        PlanetUIConfirmationToOrigo.Header = new PanelHeader(" Navigation Menu ");
+
+        return PlanetUIConfirmationToOrigo;
+    }
+
+    public static Panel PlanetTravelConfirmationToSterelis() {
+        var PlanetUIConfirmationToSterelis = new Panel(StringsStuff.PlanetTravelConfirmationToSterelis);
+
+        PlanetUIConfirmationToSterelis.Width = PlanetUIChoiceWidth;
+        PlanetUIConfirmationToSterelis.Height = PlayerUIChoiceHeight;
+        PlanetUIConfirmationToSterelis.Header = new PanelHeader(" Navigation Menu ");
+
+        return PlanetUIConfirmationToSterelis;
+    }
+
+    public static Panel PlanetTravelConfirmationToPrimaris() {
+        var PlanetUIConfirmationToPrimaris = new Panel(StringsStuff.PlanetTravelConfirmationToPrimaris);
+
+        PlanetUIConfirmationToPrimaris.Width = PlanetUIChoiceWidth;
+        PlanetUIConfirmationToPrimaris.Height = PlayerUIChoiceHeight;
+        PlanetUIConfirmationToPrimaris.Header = new PanelHeader(" Navigation Menu ");
+
+        return PlanetUIConfirmationToPrimaris;
     }
 
     public static Panel PlanetUIMap() {

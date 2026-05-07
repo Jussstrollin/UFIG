@@ -4,3 +4,5 @@ obj/
 *.suo
 Save.json
 .idea/
+.editorconfig
+Hold.txt
