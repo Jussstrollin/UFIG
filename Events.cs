@@ -3,7 +3,7 @@ namespace UFIG;
 using static Program;
 
 public static class EventSystem {
-    public static int EventToShow = 0; // for panel control, 1x is reserved for Alpha. 2x for beta, 3x for Gamma, and 1-9 for essence, 50 Above is for random events
+    public static int EventToShow = 10; // for panel control, 1x is reserved for Alpha. 2x for beta, 3x for Gamma, and 1-9 for essence, 50 Above is for random events
     public static int EssenceForcedEventDone = 0; // up to 9
     public static int AlphaForcedEventDone = 0;
     public static int BetaForcedEventDone = 0;

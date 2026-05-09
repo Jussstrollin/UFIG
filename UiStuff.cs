@@ -216,7 +216,7 @@ public class PlanetUI {
         return PlanetLayout;
     }
 
-    public Layout ShowTravelUi {
+    // public Layout ShowTravelUi {
 
-    }
+    // }
 }

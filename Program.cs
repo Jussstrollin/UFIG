@@ -15,6 +15,8 @@
 using System;
 using System.Text.Json;
 using Spectre.Console;
+using SadConsole;
+using SadConsole.Configuration;
 
 
 public static class Program {
@@ -119,10 +121,10 @@ public static class Program {
     public static ResourceDelta NetProd = new ResourceDelta();
     public static ResourceDelta Pending = new ResourceDelta(); // inits all to Zero
 
-    public static ResourceBP AlphaWallet = new ResourceBP(0.0f);
-    public static ResourceBP BetaWallet = new ResourceBP(0.0f);
-    public static ResourceBP GammaWallet = new ResourceBP(0.0f);
-    public static ResourceBP EssenceWallet = new ResourceBP(1.0f);
+    public static ResourceBP AlphaWallet = new ResourceBP(9999999.9f);
+    public static ResourceBP BetaWallet = new ResourceBP(9999999.9f);
+    public static ResourceBP GammaWallet = new ResourceBP(9999999.9f);
+    public static ResourceBP EssenceWallet = new ResourceBP(9999999.9f);
     // magic nums : Alpha : 1 essence input
     public static FactoryStuff AlphaFactory = new FactoryStuff(Resources.Alpha);
     // Beta : 1 Alpha Input
@@ -134,7 +136,7 @@ public static class Program {
         EssenceMiner = 1,
         EssenceMinerCost = 10,
 
-        AlphaFactory = 0,
+        AlphaFactory = 1,
         BetaFactory = 0,
         GammaFactory = 0,
 
@@ -260,57 +262,19 @@ public static class Program {
     }
 
     static void Main() {
-        Console.Clear();
-        AnsiConsole.Clear();
-        Load();
+        Settings.WindowTitle = "UFIG";
 
-        // Assign them
-        PlayingStateInstance = new StatePlaying();
-        ShopStateInstance = new StateShop();
-        PlanetaryStateInstance = new StatePlanetary();
+        Game.Create(120, 40);
 
-        // Set Default StartingState
-        CurrentState = PlayingStateInstance;
-        CurrentState.GoingIn(); // Start Enter Sequence
+        Game.Instance.Started += (sender, e) => {
+            Game.Instance.Screen = new StatePlaying();
+        };
 
-        while (!GameState.Stop) {
-            DateTime now = DateTime.Now;
+        Game.Instance.Run();
+    }
 
-            // while stop == false, loop
-            if (Console.KeyAvailable) {
-                var Key = Console.ReadKey(true).KeyChar;
+    static void Init() {
 
-                // These Guys need to be checked if they return true, so if key is accepted, it wont continue to the Current.HandleKeys
-                if (CheckExit(Key)) {
-                    continue;
-                }
-
-                if (StateHub(Key)) {
-                    continue;
-                }
-
-                CurrentState.HandleControls(Key);
-            }
-
-            if ((now - LastGameTick).TotalSeconds >= 1.0) {
-                if (!GameState.Pause) {
-                    HandleEvents();
-                    PushPending();
-                    WipeNetProd();
-                }
-                PauseHandler();
-                LastGameTick = now;
-            }
-
-            if ((now - LastDisplayTick).TotalSeconds >= 0.1) {
-                CurrentState.Display();
-                LastDisplayTick = now;
-            }
-
-            CurrentState.Update();
-        }
-
-        Thread.Sleep(10);
     }
 
     public static void GoToState(States ToGoTo) {
@@ -325,88 +289,6 @@ public static class Program {
 
         CurrentState.GoingIn();
         return;
-    }
-
-    public static string GetAlphaBar() {
-        // This uses a fixed-width, double-precision bar to prevent terminal layout flickering.
-        // Instead of changing the number of characters, it uses "▌" (half-block) to represent
-        // a subtler gradation inside a cell. The total width of the bar never changes,
-        // so the terminal doesn't need to recalculate the layout of the entire panel mid-frame.
-        if (Structure.AlphaFactory == 0) return "";
-
-        const int barLength = 10;
-        double progress = (double)AlphaFactoryProgressIncrement / 20.0;
-        progress = Math.Clamp(progress, 0.0, 1.0);
-
-        int totalHalfBlocks = (int)(progress * barLength * 2);
-        System.Text.StringBuilder bar = new System.Text.StringBuilder();
-
-        for (int i = 0; i < barLength; i++) {
-            int remainingHalfBlocks = totalHalfBlocks - (i * 2);
-            if (remainingHalfBlocks >= 2) bar.Append('█');
-            else if (remainingHalfBlocks == 1) bar.Append('▌');
-            else bar.Append('▒');
-        }
-
-        return $"{{{bar}}}";
-    }
-
-    public static string GetBetaBar() {
-        if (Structure.BetaFactory == 0) return "";
-
-        const int barLength = 10;
-        double progress = (double)BetaFactoryProgressIncrement / 50.0;
-        progress = Math.Clamp(progress, 0.0, 1.0); // every .10 is 10%
-
-        int totalHalfBlocks = (int)(progress * barLength * 2);
-        System.Text.StringBuilder bar = new System.Text.StringBuilder();
-
-        for (int i = 0; i < barLength; i++) {
-            int remainingHalfBlocks = totalHalfBlocks - (i * 2);
-            if (remainingHalfBlocks >= 2) bar.Append('█');
-            else if (remainingHalfBlocks == 1) bar.Append('▌');
-            else bar.Append('▒');
-        }
-
-        return $"{{{bar}}}";
-    }
-
-    public static string GetGammaBar() {
-        if (Structure.GammaFactory == 0) return "";
-
-        const int barLength = 10;
-        double progress = (double)GammaFactoryProgressIncrement / 80.0;
-        progress = Math.Clamp(progress, 0.0, 1.0);
-
-        int totalHalfBlocks = (int)(progress * barLength * 2);
-        System.Text.StringBuilder bar = new System.Text.StringBuilder();
-
-        for (int i = 0; i < barLength; i++) {
-            int remainingHalfBlocks = totalHalfBlocks - (i * 2);
-            if (remainingHalfBlocks >= 2) bar.Append('█');
-            else if (remainingHalfBlocks == 1) bar.Append('▌');
-            else bar.Append('▒');
-        }
-
-        return $"{{{bar}}}";
-    }
-
-    public static string GetEssenceBar() {
-        const int barLength = 10;
-        double progress = (double)EssenceMinerProgressIncrement / 30.0;
-        progress = Math.Clamp(progress, 0.0, 1.0);
-
-        int totalHalfBlocks = (int)(progress * barLength * 2);
-        System.Text.StringBuilder bar = new System.Text.StringBuilder();
-
-        for (int i = 0; i < barLength; i++) {
-            int remainingHalfBlocks = totalHalfBlocks - (i * 2);
-            if (remainingHalfBlocks >= 2) bar.Append('█');
-            else if (remainingHalfBlocks == 1) bar.Append('▌');
-            else bar.Append('▒');
-        }
-
-        return $"{{{bar}}}";
     }
 
     static void HandleEvents() {
