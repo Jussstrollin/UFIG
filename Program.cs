@@ -10,9 +10,8 @@
  * Note : For naming, Im using Pascal Case which just means, for example "Velocity = x;" starts with capital letters, and for multiple words, each "separate" word starts with capital letters like (IsFlying = true;)
  */
 
-
-
 using System;
+using SadConsole.Input;
 using System.Text.Json;
 using Spectre.Console;
 using SadConsole;
@@ -20,20 +19,16 @@ using SadConsole.Configuration;
 
 
 public static class Program {
+    public const int CellX = 120;
+    public const int CellY = 40;
+
     static DateTime LastGameTick = DateTime.Now;
     static DateTime LastDisplayTick = DateTime.Now;
     static DateTime LastEventTick = DateTime.Now;
 
-    static DateTime LastEssenceTick = DateTime.Now;
-    static DateTime LastAlphaFactoryTick = DateTime.Now;
-    static DateTime LastBetaFactoryTick = DateTime.Now;
-    static DateTime LastGammaFactoryTick = DateTime.Now;
-    public static DateTime LastProgressBarsTick = DateTime.Now;
+    public static States TargetState = States.Null;
 
-    public static StateInterface CurrentState;
-    public static StateInterface PlayingStateInstance;
-    public static StateInterface ShopStateInstance;
-    public static StateInterface PlanetaryStateInstance;
+    public static bool GameInitialized = false;
 
     // lowest -0.99, highest 1.0
     public static double PlanetMiningBonus = 0.0d;
@@ -88,6 +83,8 @@ public static class Program {
     }
 
     public struct GameStateBP { // Unofficial Official Player Struct
+        public States StateOn;
+
         public Menu MenuID;
         public int Progress;
 
@@ -133,12 +130,12 @@ public static class Program {
     public static FactoryStuff GammaFactory = new FactoryStuff(Resources.Gamma);
 
     public static StructuresBP Structure = new StructuresBP {
-        EssenceMiner = 1,
+        EssenceMiner = 10,
         EssenceMinerCost = 10,
 
-        AlphaFactory = 1,
-        BetaFactory = 0,
-        GammaFactory = 0,
+        AlphaFactory = 4,
+        BetaFactory = 2,
+        GammaFactory = 1,
 
         AlphaFactoryStatus = true,
         BetaFactoryStatus = true,
@@ -164,6 +161,7 @@ public static class Program {
     };
 
     public static GameStateBP GameState = new GameStateBP {
+        StateOn = States.Null,
         MenuID = Menu.Game,
         Progress = 0,
         Pause = false,
@@ -198,7 +196,8 @@ public static class Program {
     public enum States {
         StatePlaying,
         StateShop,
-        StatePlanetary // Includes Planetary map to choose, thenTravel Logic
+        StatePlanetary,
+        Null
     }
 
     public enum Menu { // NOTE : ALWAYS BE **EXPLICIT** TO SET THE INT VALUE FOR EACH
@@ -261,13 +260,25 @@ public static class Program {
         Gamma
     }
 
+    public static GlobalUI GlobalControls;
+
     static void Main() {
         Settings.WindowTitle = "UFIG";
 
-        Game.Create(120, 40);
+        Game.Create(CellX, CellY);
 
         Game.Instance.Started += (sender, e) => {
-            Game.Instance.Screen = new StatePlaying();
+            GlobalControls = new GlobalUI();
+
+            GlobalControls.GameButton.Click += (_, _) => GoToState(States.StatePlaying);
+            GlobalControls.ShopButton.Click += (_, _) => GoToState(States.StateShop);
+        };
+
+        Game.Instance.FrameUpdate += (sender, e) => {
+            if (!GameInitialized) {
+                GameInitialized = true;
+                GoToState(States.StateShop);
+            }
         };
 
         Game.Instance.Run();
@@ -277,18 +288,50 @@ public static class Program {
 
     }
 
+    public static bool HandleGlobalBinds(SadConsole.Input.Keyboard ListOfKey) {
+        foreach (var key in ListOfKey.KeysPressed) {
+            if (key.Key == Keys.G) {
+                GoToState(States.StatePlaying);
+                return true;
+            }
+            if (key.Key == Keys.S) {
+                GoToState(States.StateShop);
+                return true;
+            }
+            if (key.Key == Keys.N) {
+                GoToState(States.StatePlanetary);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static void GoToState(States ToGoTo) {
-        CurrentState.GoingOut();
+        System.Diagnostics.Debug.WriteLine($"GoToState called with: {ToGoTo}");
 
-        CurrentState = ToGoTo switch {
-            States.StatePlaying => PlayingStateInstance,
-            States.StateShop => ShopStateInstance,
-            States.StatePlanetary => PlanetaryStateInstance,
-            _ => CurrentState
-        };
+        if (GameState.StateOn == ToGoTo) return;
+        if (ToGoTo == States.Null) return;
 
-        CurrentState.GoingIn();
-        return;
+
+        if (GameState.StateOn != ToGoTo) {
+            if (Game.Instance.Screen is ScreenSurface CurrentState) {
+                CurrentState.Children.Remove(GlobalControls.ControlPanelHost);
+                CurrentState.Children.Clear();
+            }
+
+            Game.Instance.Screen = ToGoTo switch {
+                States.StatePlaying => new StatePlaying(),
+                States.StateShop => new StateShop(),
+                _ => Game.Instance.Screen
+            };
+
+            if (Game.Instance.Screen is ScreenSurface NewState) {
+                NewState.Children.Add(GlobalControls.ControlPanelHost);
+            }
+
+            GameState.StateOn = TargetState;
+        }
     }
 
     static void HandleEvents() {
@@ -407,30 +450,6 @@ public static class Program {
         Thread.Sleep(500);
     }
 
-    static bool CheckExit(char Key) {
-        if (Key == 'Q') {
-            AnsiConsole.Clear();
-
-            AnsiConsole.MarkupLine("Are you sure to Quit? [red]Y[/] / [green]N[/] ( a save will be made )");
-            GameState.MenuID = Menu.ExitMenu;
-            return true;
-        }
-
-        if (GameState.MenuID == Menu.ExitMenu) {
-            if (Key == 'Y') {
-                Save();
-                GameState.Stop = true;
-            }
-            else if (Key == 'N') {
-                CurrentState.GoingIn();
-                GameState.Stop = false;
-            }
-
-            return true;
-        }
-        return false;
-    }
-
     static bool StateHub(char Key) {
         if (Key == 'G') {
             GoToState(States.StatePlaying);
@@ -445,6 +464,8 @@ public static class Program {
             return true;
         }
 
+
+
         return false;
     }
 }
@@ -458,10 +479,3 @@ public class ResourceBP {
     }
 }
 
-public interface StateInterface {
-    public void GoingIn();
-    public void GoingOut(); // TODO: Add a argument to wherever State to goto
-    public void Display();
-    public void HandleControls(char Key);
-    public void Update();
-}
