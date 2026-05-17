@@ -1,7 +1,6 @@
 namespace UFIG;
 
 using static Program;
-using static EventSystem;
 
 using SadConsole;
 using SadConsole.UI;
@@ -164,7 +163,7 @@ public class StatePlaying : ScreenSurface {
         StatPanel.Surface.DrawLine(new Point(39, 6), new Point(68, 6), Glyph);
 
         // --- Event Panel --- //
-        if (EventToShow == 0) EventPanel.Print(0, 0, $"No Event To show :,");
+        EventPanel.Print(0, 0, $"No Event To show :,");
 
         // --- Factory Status --- //
         // Weirdly Cells[y, x], Prob using [row, column]?

@@ -13,18 +13,11 @@
 using System;
 using SadConsole.Input;
 using System.Text.Json;
-using Spectre.Console;
 using SadConsole;
 using SadConsole.Configuration;
 
 
 public static class Program {
-    public const int CellX = 120;
-    public const int CellY = 40;
-
-    static DateTime LastGameTick = DateTime.Now;
-    static DateTime LastDisplayTick = DateTime.Now;
-    static DateTime LastEventTick = DateTime.Now;
 
     public static States TargetState = States.Null;
 
@@ -41,14 +34,7 @@ public static class Program {
 
     public static int EssenceMinerProgressIncrement = 0;
 
-    public static int EventIncrement = 0;
 
-    public struct ResourceDelta {
-        public double Alpha;
-        public double Beta;
-        public double Gamma;
-        public double Essence;
-    }
 
     public struct StructuresBP { // includes their Status and cost
         public int AlphaFactory;
@@ -334,16 +320,6 @@ public static class Program {
         }
     }
 
-    static void HandleEvents() {
-        EventSystem.RefreshEvent();
-        EventSystem.ForcedAlphaEventHandler();
-        EventSystem.ForcedBetaEventHandler();
-        EventSystem.ForcedGammaEventHandler();
-        EventSystem.RandomEventHandler();
-
-        EventIncrement++;
-    }
-
     static void PauseHandler() {
         if (GameState.MenuID != Menu.Game) { // anywhere not in GameMenu, means to pause
             GameState.Pause = true;
@@ -374,6 +350,8 @@ public static class Program {
         Pending.Essence = 0;
     }
 
+    // TODO : ADD A LOADING AND SAVING SCREEN IN SADCONSOLE
+
     static void Save() {
         var ToBeSaved = new {
             Alpha = AlphaWallet.Amount,
@@ -389,11 +367,7 @@ public static class Program {
             EssenceMultiplier = UpgradeTrack.EssenceMultiplierBought,
 
             FactoryInputUpgrade = UpgradeTrack.FactoryInputUpgradeBought,
-            FactoryOutputUpgrade = UpgradeTrack.FactoryOutputUpgradeBought,
-
-            AlphaForcedEventDone = EventSystem.AlphaForcedEventDone,
-            BetaForcedEventDone = EventSystem.BetaForcedEventDone,
-            GammaForcedEventDone = EventSystem.GammaForcedEventDone
+            FactoryOutputUpgrade = UpgradeTrack.FactoryOutputUpgradeBought
         };
 
         string json = System.Text.Json.JsonSerializer.Serialize(ToBeSaved);
@@ -403,24 +377,8 @@ public static class Program {
 
     static void Load() {
         if (!System.IO.File.Exists("Save.json")) {
-            AnsiConsole.Clear();
-            AnsiConsole.Status()
-            .Start("Finding Save files...", ctx => {
-                Thread.Sleep(2000);
-            });
-            AnsiConsole.MarkupLine("[red]Nothing found[/]... Starting a new Game");
-            Thread.Sleep(1000);
             return;
         }
-
-        AnsiConsole.Clear();
-        AnsiConsole.Status()
-        .Start("Finding Save files...", ctx => {
-            Thread.Sleep(2000);
-        });
-
-        AnsiConsole.MarkupLine("Found... Loading save");
-        Thread.Sleep(1000);
 
         string json = System.IO.File.ReadAllText("Save.json");
 
@@ -441,33 +399,9 @@ public static class Program {
 
         UpgradeTrack.FactoryInputUpgradeBought = root.GetProperty("FactoryInputUpgrade").GetInt32();
         UpgradeTrack.FactoryOutputUpgradeBought = root.GetProperty("FactoryOutputUpgrade").GetInt32();
-
-        EventSystem.AlphaForcedEventDone = root.GetProperty("AlphaForcedEventDone").GetInt32();
-        EventSystem.BetaForcedEventDone = root.GetProperty("BetaForcedEventDone").GetInt32();
-        EventSystem.GammaForcedEventDone = root.GetProperty("GammaForcedEventDone").GetInt32();
-
-        AnsiConsole.MarkupLine("[green]Done![/]");
         Thread.Sleep(500);
     }
 
-    static bool StateHub(char Key) {
-        if (Key == 'G') {
-            GoToState(States.StatePlaying);
-            return true;
-        }
-        else if (Key == 'S') {
-            GoToState(States.StateShop);
-            return true;
-        }
-        else if (Key == 'N') {
-            GoToState(States.StatePlanetary);
-            return true;
-        }
-
-
-
-        return false;
-    }
 }
 
 public class ResourceBP {
