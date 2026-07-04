@@ -1,150 +1,378 @@
-namespace UFIG;
+using System;
+using System.Collections.Generic;
 
-using static Program;
+namespace StellaForge;
 
-public class FactoryStuff
-{
-    public Resources Resource { get; set; }
-    public string HaltReason { get; private set; } = ""; // a defualt value so C# wont cry bout it
+public class Factories {
+    public class Traits {
+        private static Random RNG = new();
 
-    public FactoryStuff(Resources Resource) {
-        this.Resource = Resource;
-    }
+        public static readonly List<Enums.FactoryTrait> LuckGivenTraitPool = new() { Enums.FactoryTrait.PassedQualityAssurance, Enums.FactoryTrait.ThoughtfulMakers };
 
-    // 5% Input reduction per upgrades boguht
-    static double BonusInputReduction => 0.05f * UpgradeTrack.FactoryInputUpgradeBought;
-    // 10% Bonus prod per upgrade Bought
-    static double BonusProduction => 1 + (0.10f * UpgradeTrack.FactoryOutputUpgradeBought);
-
-    bool FactoryHalted = true;
-
-    private (Resources[] InputTypes, double[] InputAmount) GetInputRequirements() { // takes Base Resources
-        return this.Resource switch {
-            Resources.Alpha => (
-                new Resources[] { Resources.Essence },
-                new double[] { 5.0d }
-            ),
-            Resources.Beta => (
-                new Resources[] { Resources.Essence, Resources.Alpha },
-                new double[] { 15.0d, 10.0d }
-            ),
-            Resources.Gamma => (
-                new Resources[] { Resources.Essence, Resources.Alpha, Resources.Beta },
-                new double[] { 30.0d, 20.0d, 15.0d}
-            ),
-            _ => (new Resources[] {}, new double[] {})
-        };
-    }
-
-    // LookUp what this Factory Produces
-    private (Resources OutputResource, double OutputAmount) GetOutputs() {
-        return this.Resource switch { // what factor this is and Output then how many
-            Resources.Alpha => (Resources.Alpha, 1.0d),
-            Resources.Beta => (Resources.Beta, 1.0d),
-            Resources.Gamma => (Resources.Gamma, 1.0d),
-            _ => (Resources.Essence, 0.0d)
-        };
-    }
-
-    // LookUp what Resource we have or rather, the user have. Based on the crap we need
-    private double GetResourceAmount(Resources Resource) {
-        return Resource switch {
-            Resources.Essence => EssenceWallet.Amount,
-            Resources.Alpha => AlphaWallet.Amount,
-            Resources.Beta => BetaWallet.Amount,
-            Resources.Gamma => GammaWallet.Amount,
-            _ => 0.0d
-        };
-    }
-
-    private int GetFactoryCount(Resources Resource) {
-        return Resource switch {
-            Resources.Alpha => Structure.AlphaFactory,
-            Resources.Beta => Structure.BetaFactory,
-            Resources.Gamma => Structure.GammaFactory,
-            _ => 0
-        };
-    }
-
-    // Return False if Failed, and true if otherwise
-    public bool InputCheck() {
-        int FactoryAmount = GetFactoryCount(this.Resource);
-        if (FactoryAmount <= 0) {
-            this.HaltReason = $"[gray]No Factory have been Purchased[/]";
-
-            return false;
-        }
-
-        var (InputTypes, InputAmount) = GetInputRequirements();
-
-        for (int i = 0; i < InputTypes.Length; i++) {
-            double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
-            double Available = GetResourceAmount(InputTypes[i]);
-
-            if (Needed > Available) {
-                this.HaltReason = $"[red] Waiting for {InputTypes[i]}[/]";
-                return false;
+        public static Enums.FactoryTrait? RollTraitFor() {
+            // TODO: Add a weight value depending on the Factory's LuckValue to getting Positive or Negative trait, both fields and values will be in the future
+            long Value = RNG.NextInt64(100);
+            // PassedQA = 20%
+            // ThoughtfulMakers = 20%
+            // null / reserved for future = 60%
+            if (Value >= 0 && Value < 20) {
+                return LuckGivenTraitPool[0];
+            }
+            else if (Value >= 20 && Value < 40) {
+                return LuckGivenTraitPool[1];
+            }
+            else {
+                return null;
             }
         }
 
-        return true;
+        public class GenericTrait {
+            public GenericTrait(GenericFactory Factory, double? OM, double? IM, int? TNP, Enums.FactoryTrait TID, bool IGBT) {
+                FactoryOn = Factory;
+                OutputMultipler = OM;
+                InputMultiplier = IM;
+                TickNeededToProd = TNP;
+                TraitIdentifier = TID;
+                IsGivenByTier = IGBT;
+                ApplyEffects();
+                AddSelfToList();
+            }
+
+            protected GenericFactory FactoryOn { get; set; }
+            protected double? OutputMultipler { get; set; } = null;
+            protected double? InputMultiplier { get; set; } = null;
+            protected int? TickNeededToProd { get; set; } = null;
+            public Enums.FactoryTrait TraitIdentifier { get; set; }
+            protected bool IsGivenByTier { get; set; } = false;
+
+            private void AddSelfToList() {
+                if (IsGivenByTier) {
+                    FactoryOn.TierGivenTraitList.Add(this);
+                }
+                else {
+                    FactoryOn.TraitList.Add(this);
+                }
+            }
+
+            private void ApplyEffects() {
+                if (OutputMultipler != null) {
+                    if (OutputMultipler >= -1.0) {
+                        FactoryOn.OutputMult *= (double)(1.0 + OutputMultipler);
+                    }
+                }
+                if (InputMultiplier != null) {
+                    if (InputMultiplier >= -1.0) {
+                        FactoryOn.InputMult *= (double)(1.0 + InputMultiplier);
+                    }
+                }
+                if (TickNeededToProd != null) {
+                    FactoryOn.TickNeededToProd += (int)TickNeededToProd;
+                }
+            }
+
+            public void RemoveSelf() {
+                bool Removed = false;
+
+                if (IsGivenByTier) {
+                    Removed = FactoryOn.TierGivenTraitList.Remove(this);
+                }
+                else {
+                    Removed = FactoryOn.TraitList.Remove(this);
+                }
+
+                if (Removed) {
+                    if (OutputMultipler != null) {
+                        if (OutputMultipler > -1.0) {
+                            FactoryOn.OutputMult /= (double)(1.0 + OutputMultipler);
+                        }
+                    }
+                    if (InputMultiplier != null) {
+                        if (InputMultiplier > -1.0) {
+                            FactoryOn.InputMult /= (double)(1.0 + InputMultiplier);
+                        }
+                    }
+                    if (TickNeededToProd != null) {
+                        FactoryOn.TickNeededToProd -= (int)TickNeededToProd;
+                    }
+                }
+            }
+
+            public virtual void TickEffect() { }
+        }
+
+        public class PassedQualityAssurance : GenericTrait {
+            public PassedQualityAssurance(GenericFactory FactoryIsOn) : base(FactoryIsOn, 0.03, null, null, Enums.FactoryTrait.PassedQualityAssurance, false) { }
+        }
+
+        public class ThoughtfulMakers : GenericTrait {
+            public ThoughtfulMakers(GenericFactory FactoryIsOn) : base(FactoryIsOn, 0.10, 0.10, null, Enums.FactoryTrait.ThoughtfulMakers, false) { }
+        }
     }
 
-    public bool RunFactory() {
-        if (InputCheck()) {
-            int FactoryAmount = GetFactoryCount(this.Resource);
-            var (InputTypes, InputAmount) = GetInputRequirements();
-            var (OutputResource, OutputAmount) = GetOutputs();
+    public class TierApplier {
+        private static Random RNG = new();
 
-            // Deduct inputs (no planet bonus here, input cost is fixed)
-            for (int i = 0; i < InputTypes.Length; i++) {
-                double Needed = (InputAmount[i] * FactoryAmount) - (BonusInputReduction * FactoryAmount);
+        public class GenericTierEffect {
+            public GenericTierEffect(GenericFactory Factory, double? Om, double? Im, int? TNP, Enums.FactoryTier TI, int MaxTrait) {
+                OutputMultipler = Om;
+                InputMultiplier = Im;
+                TickNeededToProd = TNP;
+                FactoryAimingAt = Factory;
+                TierIdentifier = TI;
+                MaxTraitToApply = MaxTrait;
+                TagFactory();
+            }
 
-                // Deduct from pending based on resource type
-                switch (InputTypes[i]) {
-                    case Resources.Essence:
-                        Pending.Essence -= Needed;
-                        NetProd.Essence -= Needed;
+            protected GenericFactory FactoryAimingAt;
+            protected double? OutputMultipler { get; set; } = null;
+            protected double? InputMultiplier { get; set; } = null;
+            protected int? TickNeededToProd { get; set; } = null;
+            protected Enums.FactoryTier TierIdentifier { get; set; }
+
+            protected int MaxTraitToApply { get; set; }
+
+            private void TagFactory() {
+                FactoryAimingAt.FactoryTier = this.TierIdentifier;
+            }
+
+            public virtual void ApplyEffect() {
+                if (OutputMultipler != null) {
+                    if (OutputMultipler >= -1.0) {
+                        FactoryAimingAt.OutputMult *= (double)(1.0 + OutputMultipler);
+                    }
+                }
+                if (InputMultiplier != null) {
+                    if (InputMultiplier >= -1.0) {
+                        FactoryAimingAt.InputMult *= (double)(1.0 + InputMultiplier);
+                    }
+                }
+                if (TickNeededToProd != null) {
+                    FactoryAimingAt.TickNeededToProd += (int)TickNeededToProd;
+                }
+
+                FactoryAimingAt.MaxTrait = MaxTraitToApply;
+            }
+
+            public virtual void TickInject() { }
+        }
+
+        public class PrototypeTier : GenericTierEffect {
+            public PrototypeTier(GenericFactory F) : base(F, -0.10, null, null, Enums.FactoryTier.Prototype, 2) {
+                base.ApplyEffect();
+                base.TickInject();
+            }
+
+            public override void TickInject() {
+                void SkipTickChance() {
+                    if (RNG.NextDouble() >= 0.70) {
+                        FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
+                    }
+                }
+                FactoryAimingAt.OnTickEffect += SkipTickChance;
+            }
+        }
+
+        public class PrototypePlusTier : GenericTierEffect {
+            public PrototypePlusTier(GenericFactory F) : base(F, -0.05, null, null, Enums.FactoryTier.PrototypePlus, 2) {
+                base.ApplyEffect();
+                base.TickInject();
+            }
+
+            public override void TickInject() {
+                void Plus_SkipTickChance() {
+                    if (RNG.NextDouble() >= 0.70) {
+                        FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
+                    }
+                }
+                FactoryAimingAt.OnTickEffect += Plus_SkipTickChance;
+            }
+        }
+
+        public class PrototypePlusPlusTier : GenericTierEffect {
+            public PrototypePlusPlusTier(GenericFactory F) : base(F, null, null, null, Enums.FactoryTier.PrototypePlusPlus, 2) {
+                base.ApplyEffect();
+                base.TickInject();
+            }
+
+            public override void TickInject() {
+                void PlusPlus_DoubleTickIncrementChance() {
+                    if (RNG.NextDouble() >= 0.90) {
+                        FactoryAimingAt.CurrTick++;
+                    }
+                }
+                FactoryAimingAt.OnTickEffect += PlusPlus_DoubleTickIncrementChance;
+            }
+        }
+    }
+
+    public class FactoryCreationRelated {
+        public static int MakeNewFactory(
+            MainFactory MainFactoryToAttachOn,
+            Enums.FactoryTypes ToMake,
+            Storage StorageRef,
+            Enums.FactoryTier FT
+        ) {
+            GenericFactory NewFactory = null;
+
+            if (ToMake == Enums.FactoryTypes.AlphaFactory) {
+                NewFactory = new AlphaFactory(MainFactoryToAttachOn, StorageRef);
+            }
+            else if (ToMake == Enums.FactoryTypes.BetaFactory) {
+                NewFactory = new BetaFactory(MainFactoryToAttachOn, StorageRef);
+            }
+            else if (ToMake == Enums.FactoryTypes.GammaFactory) {
+                NewFactory = new GammaFactory(MainFactoryToAttachOn, StorageRef);
+            }
+
+            if (NewFactory == null) {
+                return 1;
+            }
+
+            switch (FT) {
+                case Enums.FactoryTier.Prototype:
+                    new TierApplier.PrototypeTier(NewFactory);
+                    NewFactory.FactoryTier = Enums.FactoryTier.Prototype;
+                    break;
+                case Enums.FactoryTier.PrototypePlus:
+                    new TierApplier.PrototypePlusTier(NewFactory);
+                    NewFactory.FactoryTier = Enums.FactoryTier.PrototypePlus;
+
+                    break;
+                case Enums.FactoryTier.PrototypePlusPlus:
+                    new TierApplier.PrototypePlusPlusTier(NewFactory);
+                    NewFactory.FactoryTier = Enums.FactoryTier.PrototypePlusPlus;
+                    break;
+                default:
+                    break;
+            }
+
+            for (int i = 0; i < NewFactory.MaxTrait; i++) {
+                Enums.FactoryTrait? Trait = Traits.RollTraitFor();
+
+                if (Trait == null) {
+                    continue;
+                }
+
+                bool IsActive = false;
+                foreach (var TraitFound in NewFactory.TraitList) {
+                    if (TraitFound.TraitIdentifier == Trait) {
+                        IsActive = true;
                         break;
-                    case Resources.Alpha:
-                        Pending.Alpha -= Needed;
-                        NetProd.Alpha -= Needed;
+                    }
+                }
+
+                if (IsActive) {
+                    continue;
+                }
+
+                switch (Trait) {
+                    case Enums.FactoryTrait.PassedQualityAssurance:
+                        new Traits.PassedQualityAssurance(NewFactory);
                         break;
-                    case Resources.Beta:
-                        Pending.Beta -= Needed;
-                        NetProd.Beta -= Needed;
+                    case Enums.FactoryTrait.ThoughtfulMakers:
+                        new Traits.ThoughtfulMakers(NewFactory);
                         break;
-                    case Resources.Gamma:
-                        Pending.Gamma -= Needed;
-                        NetProd.Gamma -= Needed;
+                    default:
                         break;
                 }
             }
 
-            // Calculate output with planet bonus AND production bonus
-            double ToAdd = (OutputAmount * FactoryAmount) * BonusProduction * (1.0d + PlanetFactoryBonus);
 
-            // Add output to pending
-            switch (OutputResource) {
-                case Resources.Alpha:
-                    Pending.Alpha += ToAdd;
-                    NetProd.Alpha += ToAdd;
-                    break;
-                case Resources.Beta:
-                    Pending.Beta += ToAdd;
-                    NetProd.Beta += ToAdd;
-                    break;
-                case Resources.Gamma:
-                    Pending.Gamma += ToAdd;
-                    NetProd.Gamma += ToAdd;
-                    break;
-            }
-
-            // Push and wipe in same function
-            PushPending();
-            WipePending();
-            return true;
+            MainFactoryToAttachOn.FactoryList.Add(NewFactory);
+            return 0;
         }
-        return false;
+    }
+
+    public class GenericFactory {
+        // word salad here but basically
+        // protected : children can access it so BallzClass : GenericFactory, BallzClass Can access it.
+        // virtual : children can implement their own function logic, just that others can call Generic.Tick() no matter the implementation.
+
+        public Dictionary<Enums.ResourceType, double> Inputs;
+        public Dictionary<Enums.ResourceType, double> Outputs;
+        public double InputMult = 1.0d;
+        public double OutputMult = 1.0d;
+        protected Storage _StorageRef;
+        protected MainFactory ToAttachTo;
+
+        public int MaxTrait = 0;
+        public List<Traits.GenericTrait> TraitList;
+        public List<Traits.GenericTrait> TierGivenTraitList;
+
+        public Enums.FactoryTypes FactoryType { get; set; }
+        public Enums.FactoryTier FactoryTier { get; set; }
+
+        public event Action? OnTickEffect;
+
+        public GenericFactory(MainFactory TAT, Storage StorageRef) {
+            ToAttachTo = TAT;
+            _StorageRef = StorageRef;
+            Inputs = new();
+            Outputs = new();
+            TraitList = new();
+            TierGivenTraitList = new();
+            TAT.InvokeChangeHasHappened();
+            ToAttachTo.OnFactoryTick += Tick;
+        }
+
+        public int CurrTick { get; set; } = 0;
+        public int TickNeededToProd { get; set; }
+
+        public virtual void Tick() {
+            CurrTick++;
+            OnTickEffect?.Invoke();
+            if (CurrTick >= TickNeededToProd) {
+                Storage.ReturnType Status = Storage.ReturnType.SUCCESS;
+                foreach (var Input in Inputs) {
+                    var _confirmation = ToAttachTo.FactoryStorage.TryDeduct(Input.Key, Input.Value * InputMult, true);
+                    if (_confirmation != Storage.ReturnType.SUCCESS) {
+                        Status = Storage.ReturnType.FAIL;
+                    }
+                }
+
+                if (Status == Storage.ReturnType.SUCCESS) {
+                    foreach (var Item in Inputs) {
+                        ToAttachTo.FactoryStorage.TryDeduct(Item.Key, Item.Value * InputMult, false);
+                    }
+                    foreach (var Item in Outputs) {
+                        ToAttachTo.FactoryStorage.TryAppend(Item.Key, Item.Value * OutputMult);
+                    }
+                }
+                CurrTick = 0;
+            }
+        }
+    }
+
+    public class AlphaFactory : GenericFactory {
+        public AlphaFactory(MainFactory TAT, Storage storageRef)
+            : base(TAT, storageRef) {
+            FactoryType = Enums.FactoryTypes.AlphaFactory;
+            Inputs.Add(Enums.ResourceType.Essence, 1.0d);
+            Outputs.Add(Enums.ResourceType.Alpha, 1.0d);
+            TickNeededToProd = 3;
+        }
+    }
+
+    public class BetaFactory : GenericFactory {
+        public BetaFactory(MainFactory TAT, Storage storageRef)
+            : base(TAT, storageRef) {
+            FactoryType = Enums.FactoryTypes.BetaFactory;
+            Inputs.Add(Enums.ResourceType.Alpha, 1.0d);
+            Outputs.Add(Enums.ResourceType.Beta, 0.5d);
+            TickNeededToProd = 8;
+        }
+    }
+
+    public class GammaFactory : GenericFactory {
+        public GammaFactory(MainFactory TAT, Storage storageRef)
+            : base(TAT, storageRef) {
+            FactoryType = Enums.FactoryTypes.GammaFactory;
+            Inputs.Add(Enums.ResourceType.Alpha, 1.0d);
+            Inputs.Add(Enums.ResourceType.Beta, 0.5d);
+            Inputs.Add(Enums.ResourceType.Essence, 2.0);
+            Outputs.Add(Enums.ResourceType.Gamma, 1.0d);
+            TickNeededToProd = 10;
+        }
     }
 }
+
