@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace StellaForge;
 
+#nullable enable
+
 public class Factories {
     public class Traits {
         private static Random RNG = new();
 
-        public static readonly List<Enums.FactoryTrait> LuckGivenTraitPool = new() { Enums.FactoryTrait.PassedQualityAssurance, Enums.FactoryTrait.ThoughtfulMakers };
+        public static readonly List<Enums.FactoryTrait> LuckGivenTraitPool = new() { Enums.FactoryTrait.PassedQualityAssurance, Enums.FactoryTrait.ThoughtfulMakers, Enums.FactoryTrait.BrokenOutputHatch };
 
         public static Enums.FactoryTrait? RollTraitFor() {
             // TODO: Add a weight value depending on the Factory's LuckValue to getting Positive or Negative trait, both fields and values will be in the future
@@ -21,10 +23,15 @@ public class Factories {
             else if (Value >= 20 && Value < 40) {
                 return LuckGivenTraitPool[1];
             }
+            else if (Value >= 40 && Value < 50) {
+                return LuckGivenTraitPool[2];
+            }
             else {
                 return null;
             }
         }
+
+
 
         public class GenericTrait {
             public GenericTrait(GenericFactory Factory, double? OM, double? IM, int? TNP, Enums.FactoryTrait TID, bool IGBT) {
@@ -70,7 +77,7 @@ public class Factories {
                 }
             }
 
-            public void RemoveSelf() {
+            public virtual void RemoveSelf() {
                 bool Removed = false;
 
                 if (IsGivenByTier) {
@@ -105,7 +112,11 @@ public class Factories {
         }
 
         public class ThoughtfulMakers : GenericTrait {
-            public ThoughtfulMakers(GenericFactory FactoryIsOn) : base(FactoryIsOn, 0.10, 0.10, null, Enums.FactoryTrait.ThoughtfulMakers, false) { }
+            public ThoughtfulMakers(GenericFactory FactoryIsOn) : base(FactoryIsOn, -0.10, 0.10, null, Enums.FactoryTrait.ThoughtfulMakers, false) { }
+        }
+
+        public class BrokenOutputHatch : GenericTrait {
+            public BrokenOutputHatch(GenericFactory FactoryIsOn) : base(FactoryIsOn, null, -0.05, null, Enums.FactoryTrait.BrokenOutputHatch, false) { }
         }
     }
 
@@ -166,7 +177,9 @@ public class Factories {
                 void SkipTickChance() {
                     if (RNG.NextDouble() >= 0.70) {
                         FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
+                        Console.WriteLine("PrototypeTier SkipTickChance was triggered!");
                     }
+                    Console.WriteLine("PrototypeTier SkipTickChance was Called!");
                 }
                 FactoryAimingAt.OnTickEffect += SkipTickChance;
             }
@@ -182,7 +195,9 @@ public class Factories {
                 void Plus_SkipTickChance() {
                     if (RNG.NextDouble() >= 0.70) {
                         FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
+                        Console.WriteLine("Prototype+Tier SkipTickChance was triggered!");
                     }
+                    Console.WriteLine("Prototype+Tier SkipTickChance was Called!");
                 }
                 FactoryAimingAt.OnTickEffect += Plus_SkipTickChance;
             }
@@ -198,7 +213,9 @@ public class Factories {
                 void PlusPlus_DoubleTickIncrementChance() {
                     if (RNG.NextDouble() >= 0.90) {
                         FactoryAimingAt.CurrTick++;
+                        Console.WriteLine("Prototype++Tier SkipTickChance was triggered!");
                     }
+                    Console.WriteLine("Prototype++Tier SkipTickChance was Called!");
                 }
                 FactoryAimingAt.OnTickEffect += PlusPlus_DoubleTickIncrementChance;
             }
@@ -206,47 +223,54 @@ public class Factories {
     }
 
     public class FactoryCreationRelated {
+        public static readonly Dictionary<Enums.FactoryTypes, Func<MainFactory, Storage, GenericFactory>> FactoryMap = new() {
+            { Enums.FactoryTypes.AlphaFactory, (MF, S) => new AlphaFactory(MF, S) },
+            { Enums. FactoryTypes.BetaFactory, (MF, S) => new BetaFactory(MF, S) },
+            { Enums.FactoryTypes.GammaFactory, (MF, S) => new GammaFactory(MF, S) }
+        };
+        public static readonly Dictionary<Enums.FactoryTier, Func<GenericFactory, TierApplier.GenericTierEffect>> TierMap = new() {
+            { Enums.FactoryTier.Prototype, (ToAttachTo) => new TierApplier.PrototypeTier(ToAttachTo) },
+            { Enums.FactoryTier.PrototypePlus, (ToAttachTo) => new TierApplier.PrototypePlusTier(ToAttachTo) },
+            { Enums.FactoryTier.PrototypePlusPlus, (ToAttachTo) => new TierApplier.PrototypePlusPlusTier(ToAttachTo) }
+        };
+        public static readonly Dictionary<Enums.FactoryTrait, Func<GenericFactory, Traits.GenericTrait>> TraitMap = new() {
+            { Enums.FactoryTrait.PassedQualityAssurance, (ToAttachTo) => new Traits.PassedQualityAssurance(ToAttachTo) },
+            { Enums.FactoryTrait.ThoughtfulMakers, (ToAttachTo) => new Traits.ThoughtfulMakers(ToAttachTo) },
+            { Enums.FactoryTrait.BrokenOutputHatch, (ToAttachTo) => new Traits.BrokenOutputHatch(ToAttachTo) }
+        };
+
         public static int MakeNewFactory(
             MainFactory MainFactoryToAttachOn,
             Enums.FactoryTypes ToMake,
             Storage StorageRef,
             Enums.FactoryTier FT
         ) {
-            GenericFactory NewFactory = null;
+            GenericFactory? NewFactory = null;
 
-            if (ToMake == Enums.FactoryTypes.AlphaFactory) {
-                NewFactory = new AlphaFactory(MainFactoryToAttachOn, StorageRef);
+            if (FactoryMap.TryGetValue(ToMake, out var FactoryCreator)) {
+                NewFactory = FactoryCreator(MainFactoryToAttachOn, StorageRef);
             }
-            else if (ToMake == Enums.FactoryTypes.BetaFactory) {
-                NewFactory = new BetaFactory(MainFactoryToAttachOn, StorageRef);
-            }
-            else if (ToMake == Enums.FactoryTypes.GammaFactory) {
-                NewFactory = new GammaFactory(MainFactoryToAttachOn, StorageRef);
-            }
-
-            if (NewFactory == null) {
+            else {
                 return 1;
             }
 
-            switch (FT) {
-                case Enums.FactoryTier.Prototype:
-                    new TierApplier.PrototypeTier(NewFactory);
-                    NewFactory.FactoryTier = Enums.FactoryTier.Prototype;
-                    break;
-                case Enums.FactoryTier.PrototypePlus:
-                    new TierApplier.PrototypePlusTier(NewFactory);
-                    NewFactory.FactoryTier = Enums.FactoryTier.PrototypePlus;
+            GetThisBoiATier(NewFactory, FT);
 
-                    break;
-                case Enums.FactoryTier.PrototypePlusPlus:
-                    new TierApplier.PrototypePlusPlusTier(NewFactory);
-                    NewFactory.FactoryTier = Enums.FactoryTier.PrototypePlusPlus;
-                    break;
-                default:
-                    break;
+            GetThisBoiATrait(NewFactory);
+
+            MainFactoryToAttachOn.FactoryList.Add(NewFactory);
+            return 0;
+        }
+
+        private static void GetThisBoiATier(GenericFactory WhoToGive, Enums.FactoryTier WhatToGive) {
+            if (TierMap.TryGetValue(WhatToGive, out var TierCreator)) {
+                TierCreator(WhoToGive);
             }
+        }
 
-            for (int i = 0; i < NewFactory.MaxTrait; i++) {
+        private static void GetThisBoiATrait(GenericFactory WhoToGive) {
+            if (WhoToGive.TraitList.Count != 0) { Console.WriteLine("Failed to give boi a trait: Factory already have a trait!"); return; }
+            for (int i = 0; i < WhoToGive.MaxTrait; i++) {
                 Enums.FactoryTrait? Trait = Traits.RollTraitFor();
 
                 if (Trait == null) {
@@ -254,7 +278,7 @@ public class Factories {
                 }
 
                 bool IsActive = false;
-                foreach (var TraitFound in NewFactory.TraitList) {
+                foreach (var TraitFound in WhoToGive.TraitList) {
                     if (TraitFound.TraitIdentifier == Trait) {
                         IsActive = true;
                         break;
@@ -265,21 +289,17 @@ public class Factories {
                     continue;
                 }
 
-                switch (Trait) {
-                    case Enums.FactoryTrait.PassedQualityAssurance:
-                        new Traits.PassedQualityAssurance(NewFactory);
-                        break;
-                    case Enums.FactoryTrait.ThoughtfulMakers:
-                        new Traits.ThoughtfulMakers(NewFactory);
-                        break;
-                    default:
-                        break;
+                if (TraitMap.TryGetValue(Trait.Value, out var TraitCreator)) {
+                    TraitCreator(WhoToGive);
                 }
             }
+        }
 
-
-            MainFactoryToAttachOn.FactoryList.Add(NewFactory);
-            return 0;
+        public static void RerollTraits(GenericFactory ToReroll) {
+            foreach (var Trait in ToReroll.TraitList) {
+                Trait.RemoveSelf();
+            }
+            GetThisBoiATrait(ToReroll);
         }
     }
 
@@ -339,6 +359,33 @@ public class Factories {
                     }
                 }
                 CurrTick = 0;
+            }
+        }
+
+        public virtual void KillFactory() {
+            var Removed = ToAttachTo.FactoryList.Remove(this);
+
+            if (Removed) {
+                ToAttachTo.OnFactoryTick -= Tick;
+                OnTickEffect = null;
+
+                // Clean up traits
+                foreach (var Trait in TraitList) {
+                    Trait.RemoveSelf();
+                }
+                foreach (var Trait in TierGivenTraitList) {
+                    Trait.RemoveSelf();
+                }
+
+                // Clear collections
+                Inputs.Clear();
+                Outputs.Clear();
+                TraitList.Clear();
+                TierGivenTraitList.Clear();
+
+                // Clear references
+                ToAttachTo = null!;
+                _StorageRef = null!;
             }
         }
     }

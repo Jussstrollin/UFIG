@@ -1,23 +1,25 @@
 # StellaForge Ideas :
 
+> " * " Means it hasnt been implemented, or is missing a feature before it can be Added.
+
 ## Tiers
  - Can either be bought or obtained by luck.
  Legend { ### Base Tier, #### Luck based Tier Based on the parent base tier }
 
 ### Prototype : Max 2 Traits
- - Has a high chance to get a Low quality / Negative Trait
+ - Has a high chance to get a Low quality / Negative Trait *
  - Has a small chance per tick to ignore Currtick++ effectively setting it Back a tick.
  - Reduced Output Values by 10%.
  - Cheapest and Unlocked At the start.
 
 #### Prototype+ : Max 2 Traits
- - Has lesser Chance to Get Low quality / negative trait.
+ - Has lesser Chance to Get Low quality / negative trait. *
  - Has lesser chacne to trigger tick setback.
  - Reduced output values by 5%.
  - Uncommon
 
 #### Prototype++ : Max 2 Traits
- - Has Low chance to get Higher quality / Positive Traits.
+ - Has Low chance to get Higher quality / Positive Traits. *
  - has Low Chance to Trigger Double Currtick++.
  - No reduced Output.
  - Rare

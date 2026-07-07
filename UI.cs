@@ -121,7 +121,7 @@ public class MAIN : GenericRoot {
     private const int Margin = 25;
     private const int BorderThickness = 2;
     private const int BorderSpacing = 6;
-    private const int CardListH = 300;
+    private const int CardListH = 250;
 
     private int _cardListX;
     private int _cardListY;
