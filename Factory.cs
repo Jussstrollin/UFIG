@@ -296,8 +296,10 @@ public class Factories {
         }
 
         public static void RerollTraits(GenericFactory ToReroll) {
-            foreach (var Trait in ToReroll.TraitList) {
-                Trait.RemoveSelf();
+            if (ToReroll.TraitList.Count != 0) {
+                for (int i = ToReroll.TraitList.Count - 1; i >= 0; i--) {
+                    ToReroll.TraitList[i].RemoveSelf();
+                }
             }
             GetThisBoiATrait(ToReroll);
         }

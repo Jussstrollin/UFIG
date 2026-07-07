@@ -40,7 +40,8 @@ public static class Keybinds { // done without regard for quality, god pls refac
     public static readonly Dictionary<Keys, Action> Binds = new() {
         { Keys.A, () => DebugAddFactoryBind(Enums.FactoryTypes.AlphaFactory, Enums.FactoryTier.PrototypePlusPlus)},
         { Keys.B, () => DebugAddFactoryBind(Enums.FactoryTypes.BetaFactory, Enums.FactoryTier.PrototypePlusPlus)},
-        { Keys.G, () => DebugAddFactoryBind(Enums.FactoryTypes.GammaFactory, Enums.FactoryTier.Prototype)}
+        { Keys.G, () => DebugAddFactoryBind(Enums.FactoryTypes.GammaFactory, Enums.FactoryTier.Prototype)},
+        { Keys.R, () => DebugRerollFactoryTrait()}
     };
 
     static double LastTime;
@@ -65,6 +66,11 @@ public static class Keybinds { // done without regard for quality, god pls refac
 
     public static void DebugAddFactoryBind(Enums.FactoryTypes Type, Enums.FactoryTier Tier) {
         Factories.FactoryCreationRelated.MakeNewFactory(GlobalState.OutpostPlayerOn, Type, GlobalState.OutpostPlayerOn.FactoryStorage, Tier);
+    }
+
+    public static void DebugRerollFactoryTrait() {
+        foreach (var Factory in GlobalState.OutpostPlayerOn.FactoryList)
+            Factories.FactoryCreationRelated.RerollTraits(Factory);
     }
 }
 
