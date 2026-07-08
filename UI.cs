@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Input;
 namespace StellaForge;
 
 // UI layout is mostly made my AI, cuz im way too lazy to do it, but the generics and Architectural decisions is still mine.
+// again, the layout making itself is from AI, as for now i cannot be bothered to make a UI everysingle time i add soemthig new.
 
 public enum Menu { MAIN }
 
@@ -96,42 +97,57 @@ public static class UI {
 // --- //
 
 public class MAIN : GenericRoot {
-    private ResourcePanel _resourcePanel;
-    private FactoryPanelRoot _factoryPanelRoot;
-    private List<FactoryCard> _cardList;
-    private GenericScrollableRoot _scrollableRoot;
-    private Factories.GenericFactory _selectedFactory;
+    private ResourcePanel _resourcePanel; // Resource display panel (shows Essence, Alpha, Beta, Gamma amounts)
+    private FactoryPanelRoot _factoryPanelRoot; // Container for factory info panel
+    private List<FactoryCard> _cardList; // List of factory cards in the scrollable area
+    private GenericScrollableRoot _scrollableRoot; // Scrollable container for factory cards
+    private Factories.GenericFactory _selectedFactory; // Currently selected factory for detailed view
+
+    // Factory creation buttons
+    private GenericDrawable _alphaFactoryButton; // Button to create Alpha Factory (Prototype tier)
+    private GenericDrawable _betaFactoryButton; // Button to create Beta Factory (Prototype+ tier)
+    private GenericDrawable _gammaFactoryButton; // Button to create Gamma Factory (Prototype++ tier)
 
     // Color Scheme - Dark Sci-Fi Theme
-    private static readonly Color Background = new Color(30, 30, 35);
-    private static readonly Color PanelBg = new Color(45, 45, 50);
-    private static readonly Color PanelBgAlt = new Color(55, 55, 60);
-    private static readonly Color BorderColor = new Color(100, 100, 110);
-    private static readonly Color TextColor = Color.White;
-    private static readonly Color AccentColor = new Color(100, 180, 220);
-    private static readonly Color CardBase = new Color(60, 60, 70);
-    private static readonly Color CardHover = new Color(80, 80, 90);
-    private static readonly Color CardClick = new Color(100, 100, 115);
+    private static readonly Color Background = new Color(30, 30, 35); // Main background color
+    private static readonly Color PanelBg = new Color(45, 45, 50); // Standard panel background
+    private static readonly Color PanelBgAlt = new Color(55, 55, 60); // Alternate panel background
+    private static readonly Color BorderColor = new Color(100, 100, 110); // Border color for panels
+    private static readonly Color TextColor = Color.White; // Main text color
+    private static readonly Color AccentColor = new Color(100, 180, 220); // Accent color for highlights
+    private static readonly Color CardBase = new Color(60, 60, 70); // Base color for factory cards
+    private static readonly Color CardHover = new Color(80, 80, 90); // Hover color for factory cards
+    private static readonly Color CardClick = new Color(100, 100, 115); // Click color for factory cards
+    private static readonly Color ButtonBase = new Color(70, 70, 80); // Base color for buttons
+    private static readonly Color ButtonHover = new Color(90, 90, 100); // Hover color for buttons
+    private static readonly Color ButtonClick = new Color(110, 110, 125); // Click color for buttons
 
-    private const int ResourcePanelW = 220;
-    private const int ResourcePanelH = 120;
-    private const int CardW = 250;
-    private const int CardH = 45;
-    private const int CardSpacing = 12;
-    private const int Margin = 25;
-    private const int BorderThickness = 2;
-    private const int BorderSpacing = 6;
-    private const int CardListH = 250;
+    // Layout dimensions
+    private const int ResourcePanelW = 220; // Width of resource panel
+    private const int ResourcePanelH = 120; // Height of resource panel
+    private const int CardW = 250; // Width of factory cards
+    private const int CardH = 45; // Height of factory cards
+    private const int CardSpacing = 12; // Vertical spacing between cards
+    private const int Margin = 25; // Margin from screen edges
+    private const int BorderThickness = 2; // Thickness of panel borders
+    private const int BorderSpacing = 6; // Spacing between border and content
+    private const int CardListH = 250; // Height of the factory card scrollable area
 
-    private int _cardListX;
-    private int _cardListY;
-    private int _factoryPanelX = 290;
-    private int _factoryPanelY = 25;
-    private int _factoryPanelW = 500;
-    private int _factoryPanelH = 435;
+    // Position variables
+    private int _cardListX; // X position of factory card list
+    private int _cardListY; // Y position of factory card list
+    private int _factoryPanelX = 290; // X position of factory info panel
+    private int _factoryPanelY = 25; // Y position of factory info panel
+    private int _factoryPanelW = 500; // Width of factory info panel
+    private int _factoryPanelH = 435; // Height of factory info panel
 
-    private int _rebuildCounter = 0;
-    private const int RebuildInterval = 30;
+    // Button layout
+    private const int ButtonY = 428; // Y position for all factory creation buttons
+    private const int ButtonSpacing = 10; // Horizontal spacing between buttons
+    private const int ButtonHeight = 35; // Height of factory creation buttons
+
+    private int _rebuildCounter = 0; // Counter for periodic UI rebuilds
+    private const int RebuildInterval = 30; // Number of frames between UI rebuilds
 
     public MAIN(SpriteBatch SB, SpriteFont SF, Texture2D P) : base(SB, SF, P) {
         _cardListX = Margin;
@@ -142,9 +158,48 @@ public class MAIN : GenericRoot {
         _factoryPanelRoot = new FactoryPanelRoot(this, _factoryPanelX, _factoryPanelY, _factoryPanelW, _factoryPanelH);
         _cardList = new List<FactoryCard>();
 
+        // Create factory creation buttons
+        CreateFactoryButtons();
+
         BuildCards();
         GlobalState.OutpostPlayerOn.OnOutpostChange += BuildCards;
         UI.OnDrawCall += UpdatePeriodically;
+    }
+
+    private void CreateFactoryButtons() {
+        // NOTE: Helper function to measure text width
+        int MeasureTextWidth(string text) {
+            return (int)_font.MeasureString(text).X;
+        }
+
+        // Calculate button dimensions with shorter text
+        int alphaBtnWidth = MeasureTextWidth("A") + 20; // Smaller padding for single letters
+        int betaBtnWidth = MeasureTextWidth("B") + 20;
+        int gammaBtnWidth = MeasureTextWidth("G") + 20;
+
+        // Position buttons with spacing, ensuring they don't clip into factory panel
+        int alphaBtnX = Margin;
+        int betaBtnX = alphaBtnX + alphaBtnWidth + ButtonSpacing;
+        int gammaBtnX = betaBtnX + betaBtnWidth + ButtonSpacing;
+
+        // Create Alpha Factory button (Prototype tier)
+        _alphaFactoryButton = new GenericDrawable(this, ButtonBase, ButtonHover, ButtonClick, alphaBtnX, ButtonY, alphaBtnWidth, ButtonHeight);
+        UI.InjectHoverEffect(_alphaFactoryButton);
+        UI.InjectButton(_alphaFactoryButton, () => CreateFactory(Enums.FactoryTypes.AlphaFactory, Enums.FactoryTier.Prototype));
+
+        // Create Beta Factory button (Prototype+ tier)
+        _betaFactoryButton = new GenericDrawable(this, ButtonBase, ButtonHover, ButtonClick, betaBtnX, ButtonY, betaBtnWidth, ButtonHeight);
+        UI.InjectHoverEffect(_betaFactoryButton);
+        UI.InjectButton(_betaFactoryButton, () => CreateFactory(Enums.FactoryTypes.BetaFactory, Enums.FactoryTier.PrototypePlus));
+
+        // Create Gamma Factory button (Prototype++ tier)
+        _gammaFactoryButton = new GenericDrawable(this, ButtonBase, ButtonHover, ButtonClick, gammaBtnX, ButtonY, gammaBtnWidth, ButtonHeight);
+        UI.InjectHoverEffect(_gammaFactoryButton);
+        UI.InjectButton(_gammaFactoryButton, () => CreateFactory(Enums.FactoryTypes.GammaFactory, Enums.FactoryTier.PrototypePlusPlus));
+    }
+
+    private void CreateFactory(Enums.FactoryTypes type, Enums.FactoryTier tier) {
+        Factories.FactoryCreationRelated.MakeNewFactory(GlobalState.OutpostPlayerOn, type, GlobalState.OutpostPlayerOn.FactoryStorage, tier);
     }
 
     private void UpdatePeriodically() {
@@ -181,6 +236,37 @@ public class MAIN : GenericRoot {
     private void SelectFactory(Factories.GenericFactory factory) {
         _selectedFactory = factory;
         _factoryPanelRoot.SetFactory(factory);
+    }
+
+    public override void HookToDraw() {
+        base.HookToDraw();
+        RootOnDrawCall += DrawButtons;
+    }
+
+    private void DrawButtons() {
+        // Draw factory creation buttons with single letter text
+        DrawFactoryButton(_alphaFactoryButton, "A");
+        DrawFactoryButton(_betaFactoryButton, "B");
+        DrawFactoryButton(_gammaFactoryButton, "G");
+    }
+
+    private void DrawFactoryButton(GenericDrawable button, string text) {
+        // Draw button background
+        _spriteBatch.Draw(_pixel, new Rectangle(button.Panelx, button.Panely, button.PanelWidth, button.PanelHeight), button.CurrCol);
+
+        // Draw button border
+        _spriteBatch.Draw(_pixel, new Rectangle(button.Panelx, button.Panely, button.PanelWidth, BorderThickness), BorderColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(button.Panelx, button.Panely + button.PanelHeight - BorderThickness, button.PanelWidth, BorderThickness), BorderColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(button.Panelx, button.Panely, BorderThickness, button.PanelHeight), BorderColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(button.Panelx + button.PanelWidth - BorderThickness, button.Panely, BorderThickness, button.PanelHeight), BorderColor);
+
+        // Draw button text centered
+        Vector2 textSize = _font.MeasureString(text);
+        Vector2 textPosition = new Vector2(
+            button.Panelx + (button.PanelWidth - textSize.X) / 2,
+            button.Panely + (button.PanelHeight - textSize.Y) / 2
+        );
+        _spriteBatch.DrawString(_font, text, textPosition, TextColor);
     }
 }
 
@@ -237,35 +323,38 @@ public class ResourcePanel : GenericDrawable {
 }
 
 public class FactoryPanelRoot : GenericDrawable {
-    private FactoryPanelBasicInfo _basicInfoPanel;
-    private FactoryPanelNumericInfo _numericInfoPanel;
-    private Factories.GenericFactory _factory;
+    private GenericScrollableRoot _scrollableContent; // Scrollable container for factory info
+    private FactoryInfoPanel _infoPanel; // Combined factory information panel
+    private Factories.GenericFactory _factory; // Currently displayed factory
 
     // Color scheme matching MAIN
-    private static readonly Color PanelBg = new Color(45, 45, 50);
-    private static readonly Color PanelBgAlt = new Color(55, 55, 60);
-    private static readonly Color BorderColor = new Color(100, 100, 110);
-    private static readonly Color TextColor = Color.White;
-    private static readonly Color AccentColor = new Color(100, 180, 220);
+    private static readonly Color PanelBg = new Color(45, 45, 50); // Panel background color
+    private static readonly Color PanelBgAlt = new Color(55, 55, 60); // Alternate panel background
+    private static readonly Color BorderColor = new Color(100, 100, 110); // Border color
+    private static readonly Color TextColor = Color.White; // Text color
+    private static readonly Color AccentColor = new Color(100, 180, 220); // Accent color for highlights
 
-    private const int Margin = 15;
-    private const int BorderThickness = 2;
+    private const int Margin = 20; // Margin within the panel
+    private const int BorderThickness = 2; // Border thickness
+    private const int ContentSpacing = 320; // Spacing between scrollable content and border
 
     public FactoryPanelRoot(GenericRoot root, int x, int y, int width, int height)
         : base(root, PanelBg, PanelBg, PanelBg, x, y, width, height) {
 
-        int basicInfoH = height / 2 - Margin;
-        int numericInfoY = y + basicInfoH + Margin;
-        int numericInfoH = height - basicInfoH - Margin - Margin;
+        // Create scrollable root for factory info content
+        _scrollableContent = new GenericScrollableRoot(root._spriteBatch, root._font, root._pixel,
+            Panelx + Margin, Panely + Margin,
+            width - Margin * 2, height - Margin * 2,
+            root, BorderColor, ContentSpacing);
 
-        _basicInfoPanel = new FactoryPanelBasicInfo(root, PanelBgAlt, BorderColor, x + Margin, y + Margin, width - Margin * 2, basicInfoH);
-        _numericInfoPanel = new FactoryPanelNumericInfo(root, PanelBgAlt, BorderColor, x + Margin, numericInfoY, width - Margin * 2, numericInfoH);
+        // Create combined info panel as child of scrollable root
+        _infoPanel = new FactoryInfoPanel(_scrollableContent, PanelBgAlt, BorderColor,
+            ContentSpacing, 0, _scrollableContent.Rw - Margin, height + 250);
     }
 
     public void SetFactory(Factories.GenericFactory factory) {
         _factory = factory;
-        _basicInfoPanel.SetFactory(factory);
-        _numericInfoPanel.SetFactory(factory);
+        _infoPanel.SetFactory(factory);
     }
 
     public override void Draw() {
@@ -278,18 +367,18 @@ public class FactoryPanelRoot : GenericDrawable {
         RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx, Panely, BorderThickness, PanelHeight), BorderColor);
         RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx + PanelWidth - BorderThickness, Panely, BorderThickness, PanelHeight), BorderColor);
 
-        // Draw child panels
-        _basicInfoPanel.Draw();
-        _numericInfoPanel.Draw();
+        // The scrollable content draws itself through its HookToDraw mechanism
+        // No need to manually call Draw() here
     }
 }
 
-public class FactoryPanelBasicInfo : GenericDrawable {
-    private Factories.GenericFactory _factory;
-    private Color _borderColor;
-    private const int BorderThickness = 2;
+public class FactoryInfoPanel : GenericDrawable {
+    private Factories.GenericFactory _factory; // Currently displayed factory
+    private Color _borderColor; // Border color for the panel
+    private const int BorderThickness = 2; // Border thickness
+    private const int SectionSpacing = 20; // Vertical spacing between major sections
 
-    public FactoryPanelBasicInfo(GenericRoot root, Color bgColor, Color borderColor, int x, int y, int width, int height)
+    public FactoryInfoPanel(GenericRoot root, Color bgColor, Color borderColor, int x, int y, int width, int height)
         : base(root, bgColor, bgColor, bgColor, x, y, width, height) {
         _borderColor = borderColor;
     }
@@ -315,37 +404,120 @@ public class FactoryPanelBasicInfo : GenericDrawable {
         var textColor = Color.White;
         var accentColor = new Color(100, 180, 220);
         var labelColor = new Color(180, 180, 190);
+        var valueColor = new Color(100, 180, 220);
         float currentY = Panely + 15;
-        float lineHeight = 22;
+        float lineHeight = 20;
 
-        // Type and Tier
+        // Type and Tier section
         var typeStr = GetFactoryTypeString(_factory.FactoryType);
         var tierStr = GetFactoryTierString(_factory.FactoryTier);
 
         RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Type:", new Vector2(Panelx + 15, currentY), labelColor);
         RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, typeStr, new Vector2(Panelx + 15, currentY + lineHeight), accentColor);
-        currentY += lineHeight * 2 + 10;
+        currentY += lineHeight * 2 + 5;
 
         RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Tier:", new Vector2(Panelx + 15, currentY), labelColor);
         RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, tierStr, new Vector2(Panelx + 15, currentY + lineHeight), accentColor);
-        currentY += lineHeight * 2 + 15;
+        currentY += lineHeight * 2 + SectionSpacing;
 
-        // Traits
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"Traits ({_factory.TraitList.Count}):", new Vector2(Panelx + 15, currentY), labelColor);
+        // Traits section
+        int totalTraits = _factory.TraitList.Count + _factory.TierGivenTraitList.Count;
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"Traits ({totalTraits}):", new Vector2(Panelx + 15, currentY), labelColor);
         currentY += lineHeight;
 
+        // Draw tier-given traits first
+        if (_factory.TierGivenTraitList.Count > 0) {
+            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Tier Traits:", new Vector2(Panelx + 20, currentY), new Color(150, 150, 160));
+            currentY += lineHeight;
+            foreach (var trait in _factory.TierGivenTraitList) {
+                var traitStr = GetTraitString(trait.TraitIdentifier);
+                // Draw trait name
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"- {traitStr}", new Vector2(Panelx + 30, currentY), textColor);
+                currentY += lineHeight;
+
+                // Draw description on next line with > prefix if available
+                if (!string.IsNullOrEmpty(trait.Description)) {
+                    var wrappedDesc = WrapText(trait.Description, PanelWidth - 70);
+                    foreach (var line in wrappedDesc) {
+                        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"> {line}", new Vector2(Panelx + 40, currentY), new Color(160, 160, 170));
+                        currentY += lineHeight;
+                    }
+                }
+            }
+            currentY += 5;
+        }
+
+        // Draw random traits
         if (_factory.TraitList.Count > 0) {
+            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Random Traits:", new Vector2(Panelx + 20, currentY), new Color(150, 150, 160));
+            currentY += lineHeight;
             foreach (var trait in _factory.TraitList) {
                 var traitStr = GetTraitString(trait.TraitIdentifier);
-                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"- {traitStr}", new Vector2(Panelx + 25, currentY), textColor);
+                // Draw trait name
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"- {traitStr}", new Vector2(Panelx + 30, currentY), textColor);
+                currentY += lineHeight;
+
+                // Draw description on next line with > prefix if available
+                if (!string.IsNullOrEmpty(trait.Description)) {
+                    var wrappedDesc = WrapText(trait.Description, PanelWidth - 70);
+                    foreach (var line in wrappedDesc) {
+                        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"> {line}", new Vector2(Panelx + 40, currentY), new Color(160, 160, 170));
+                        currentY += lineHeight;
+                    }
+                }
+            }
+        }
+
+        if (totalTraits == 0) {
+            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "None", new Vector2(Panelx + 25, currentY), new Color(150, 150, 150));
+            currentY += lineHeight;
+        }
+
+        currentY += SectionSpacing;
+
+        // Multipliers section
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Input Mult:", new Vector2(Panelx + 15, currentY), labelColor);
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.InputMult:F2}x", new Vector2(Panelx + 120, currentY), valueColor);
+        currentY += lineHeight;
+
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Output Mult:", new Vector2(Panelx + 15, currentY), labelColor);
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.OutputMult:F2}x", new Vector2(Panelx + 120, currentY), valueColor);
+        currentY += lineHeight + SectionSpacing;
+
+        // Tick Progress section
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Tick Progress:", new Vector2(Panelx + 15, currentY), labelColor);
+        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.CurrTick}/{_factory.TickNeededToProd}", new Vector2(Panelx + 120, currentY), valueColor);
+        currentY += lineHeight + SectionSpacing;
+
+        // Inputs section
+        if (_factory.Inputs.Count > 0) {
+            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Inputs:", new Vector2(Panelx + 15, currentY), labelColor);
+            currentY += lineHeight;
+
+            foreach (var input in _factory.Inputs) {
+                var value = input.Value * _factory.InputMult;
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{input.Key}:", new Vector2(Panelx + 25, currentY), labelColor);
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{value:F2}", new Vector2(Panelx + 120, currentY), valueColor);
+                currentY += lineHeight;
+            }
+            currentY += SectionSpacing;
+        }
+
+        // Outputs section
+        if (_factory.Outputs.Count > 0) {
+            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Outputs:", new Vector2(Panelx + 15, currentY), labelColor);
+            currentY += lineHeight;
+
+            foreach (var output in _factory.Outputs) {
+                var value = output.Value * _factory.OutputMult;
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{output.Key}:", new Vector2(Panelx + 25, currentY), labelColor);
+                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{value:F2}", new Vector2(Panelx + 120, currentY), valueColor);
                 currentY += lineHeight;
             }
         }
-        else {
-            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "None", new Vector2(Panelx + 25, currentY), new Color(150, 150, 150));
-        }
     }
 
+    // NOTE: Helper function to convert factory type enum to display string
     private string GetFactoryTypeString(Enums.FactoryTypes type) {
         return type switch {
             Enums.FactoryTypes.AlphaFactory => "Alpha Factory",
@@ -355,6 +527,7 @@ public class FactoryPanelBasicInfo : GenericDrawable {
         };
     }
 
+    // NOTE: Helper function to convert factory tier enum to display string
     private string GetFactoryTierString(Enums.FactoryTier tier) {
         return tier switch {
             Enums.FactoryTier.Prototype => "Prototype",
@@ -368,6 +541,7 @@ public class FactoryPanelBasicInfo : GenericDrawable {
         };
     }
 
+    // NOTE: Helper function to convert factory trait enum to display string
     private string GetTraitString(Enums.FactoryTrait trait) {
         return trait switch {
             Enums.FactoryTrait.PassedQualityAssurance => "Passed QA",
@@ -377,85 +551,43 @@ public class FactoryPanelBasicInfo : GenericDrawable {
             Enums.FactoryTrait.DangerousConstruction => "Dangerous Construction",
             Enums.FactoryTrait.Control => "Control",
             Enums.FactoryTrait.EnlighteningAura => "Enlightening Aura",
+            Enums.FactoryTrait.TimeDialation => "TimeDialation",
             _ => "Unknown"
         };
     }
-}
 
-public class FactoryPanelNumericInfo : GenericDrawable {
-    private Factories.GenericFactory _factory;
-    private Color _borderColor;
-    private const int BorderThickness = 2;
+    // NOTE: Helper function to wrap text to prevent horizontal overflow
+    private List<string> WrapText(string text, float maxWidth) {
+        var words = text.Split(' ');
+        var lines = new List<string>();
+        var currentLine = "";
 
-    public FactoryPanelNumericInfo(GenericRoot root, Color bgColor, Color borderColor, int x, int y, int width, int height)
-        : base(root, bgColor, bgColor, bgColor, x, y, width, height) {
-        _borderColor = borderColor;
-    }
+        foreach (var word in words) {
+            var testLine = string.IsNullOrEmpty(currentLine) ? word : currentLine + " " + word;
+            var textSize = RootAttachedTo._font.MeasureString(testLine);
 
-    public void SetFactory(Factories.GenericFactory factory) {
-        _factory = factory;
-    }
-
-    public override void Draw() {
-        base.Draw();
-
-        // Draw border
-        RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx, Panely, PanelWidth, BorderThickness), _borderColor);
-        RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx, Panely + PanelHeight - BorderThickness, PanelWidth, BorderThickness), _borderColor);
-        RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx, Panely, BorderThickness, PanelHeight), _borderColor);
-        RootAttachedTo._spriteBatch.Draw(RootAttachedTo._pixel, new Rectangle(Panelx + PanelWidth - BorderThickness, Panely, BorderThickness, PanelHeight), _borderColor);
-
-        if (_factory == null) {
-            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "No factory selected", new Vector2(Panelx + 15, Panely + 15), new Color(150, 150, 150));
-            return;
-        }
-
-        var textColor = Color.White;
-        var labelColor = new Color(180, 180, 190);
-        var valueColor = new Color(100, 180, 220);
-        float currentY = Panely + 15;
-        float lineHeight = 20;
-
-        // Multipliers
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Input Mult:", new Vector2(Panelx + 15, currentY), labelColor);
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.InputMult:F2}x", new Vector2(Panelx + 120, currentY), valueColor);
-        currentY += lineHeight;
-
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Output Mult:", new Vector2(Panelx + 15, currentY), labelColor);
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.OutputMult:F2}x", new Vector2(Panelx + 120, currentY), valueColor);
-        currentY += lineHeight + 10;
-
-        // Tick Progress
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Tick Progress:", new Vector2(Panelx + 15, currentY), labelColor);
-        RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{_factory.CurrTick}/{_factory.TickNeededToProd}", new Vector2(Panelx + 120, currentY), valueColor);
-        currentY += lineHeight + 15;
-
-        // Inputs
-        if (_factory.Inputs.Count > 0) {
-            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Inputs:", new Vector2(Panelx + 15, currentY), labelColor);
-            currentY += lineHeight;
-
-            foreach (var input in _factory.Inputs) {
-                var value = input.Value * _factory.InputMult;
-                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{input.Key}:", new Vector2(Panelx + 25, currentY), labelColor);
-                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{value:F2}", new Vector2(Panelx + 120, currentY), valueColor);
-                currentY += lineHeight;
+            if (textSize.X > maxWidth) {
+                if (!string.IsNullOrEmpty(currentLine)) {
+                    lines.Add(currentLine);
+                    currentLine = word;
+                }
+                else {
+                    // Single word is too long, force break it
+                    currentLine = word;
+                    lines.Add(currentLine);
+                    currentLine = "";
+                }
             }
-            currentY += 10;
-        }
-
-        // Outputs
-        if (_factory.Outputs.Count > 0) {
-            RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, "Outputs:", new Vector2(Panelx + 15, currentY), labelColor);
-            currentY += lineHeight;
-
-            foreach (var output in _factory.Outputs) {
-                var value = output.Value * _factory.OutputMult;
-                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{output.Key}:", new Vector2(Panelx + 25, currentY), labelColor);
-                RootAttachedTo._spriteBatch.DrawString(RootAttachedTo._font, $"{value:F2}", new Vector2(Panelx + 120, currentY), valueColor);
-                currentY += lineHeight;
+            else {
+                currentLine = testLine;
             }
         }
+
+        if (!string.IsNullOrEmpty(currentLine)) {
+            lines.Add(currentLine);
+        }
+
+        return lines;
     }
 }
 

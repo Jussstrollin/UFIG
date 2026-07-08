@@ -51,6 +51,7 @@ public class Factories {
             protected int? TickNeededToProd { get; set; } = null;
             public Enums.FactoryTrait TraitIdentifier { get; set; }
             protected bool IsGivenByTier { get; set; } = false;
+            public string? Description { get; set; }
 
             private void AddSelfToList() {
                 if (IsGivenByTier) {
@@ -75,6 +76,8 @@ public class Factories {
                 if (TickNeededToProd != null) {
                     FactoryOn.TickNeededToProd += (int)TickNeededToProd;
                 }
+
+                FactoryOn.OnTickEffect += TickEffect;
             }
 
             public virtual void RemoveSelf() {
@@ -101,6 +104,8 @@ public class Factories {
                     if (TickNeededToProd != null) {
                         FactoryOn.TickNeededToProd -= (int)TickNeededToProd;
                     }
+
+                    FactoryOn.OnTickEffect -= TickEffect;
                 }
             }
 
@@ -108,15 +113,55 @@ public class Factories {
         }
 
         public class PassedQualityAssurance : GenericTrait {
-            public PassedQualityAssurance(GenericFactory FactoryIsOn) : base(FactoryIsOn, 0.03, null, null, Enums.FactoryTrait.PassedQualityAssurance, false) { }
+            public PassedQualityAssurance(GenericFactory FactoryIsOn, bool IsGivenByTier) : base(FactoryIsOn, 0.03, null, null, Enums.FactoryTrait.PassedQualityAssurance, IsGivenByTier) {
+                Description = "Well, it turned out Good enough.";
+            }
         }
 
         public class ThoughtfulMakers : GenericTrait {
-            public ThoughtfulMakers(GenericFactory FactoryIsOn) : base(FactoryIsOn, -0.10, 0.10, null, Enums.FactoryTrait.ThoughtfulMakers, false) { }
+            public ThoughtfulMakers(GenericFactory FactoryIsOn, bool IsGivenByTier) : base(FactoryIsOn, -0.10, 0.10, null, Enums.FactoryTrait.ThoughtfulMakers, IsGivenByTier) {
+                Description = "Whoever made this seemed to be in a good mood, the quality is better than usual.";
+            }
         }
 
         public class BrokenOutputHatch : GenericTrait {
-            public BrokenOutputHatch(GenericFactory FactoryIsOn) : base(FactoryIsOn, null, -0.05, null, Enums.FactoryTrait.BrokenOutputHatch, false) { }
+            public BrokenOutputHatch(GenericFactory FactoryIsOn, bool IsGivenByTier) : base(FactoryIsOn, null, -0.05, null, Enums.FactoryTrait.BrokenOutputHatch, IsGivenByTier) {
+                Description = "Whoops, someone broke the output hatch, I sure hope it doesnt affect production.";
+            }
+        }
+
+        public class TimeDialation : GenericTrait {
+            public TimeDialation(GenericFactory FactoryIsOn, bool IsGivenByTier, int MinInterval, int MaxInterval, int AmountToReduce, double ChanceToTrigger) : base(FactoryIsOn, null, null, null, Enums.FactoryTrait.TimeDialation, IsGivenByTier) {
+                Description = "An Unknown Anomaly causes Time Reversal on a factory everynow and then, it doesnt seem to harm the employees, just reverts progress back a few unit of Time.";
+                Min = MinInterval;
+                Max = MaxInterval;
+                ReduceAmount = AmountToReduce;
+                ChanceValue = (int)(ChanceToTrigger * 100);
+                Reroll();
+            }
+
+            private int ChanceValue;
+
+            private int Min { get; set; }
+            private int Max { get; set; }
+
+            private int ReduceAmount;
+            private int interval;
+
+            private void Reroll() {
+                interval = (int)RNG.NextInt64(Min, Max);
+            }
+
+            public override void TickEffect() {
+                interval--;
+                if (interval <= 0) {
+                    if ((int)RNG.NextInt64(0, 100) < ChanceValue) {
+                        // yes, allow it to get to negative, if its a strong rollback, it should feel like the factory is incapacitated for a while without having to actually rollback produced resources.
+                        FactoryOn.CurrTick -= ReduceAmount;
+                        Reroll();
+                    }
+                }
+            }
         }
     }
 
@@ -132,6 +177,7 @@ public class Factories {
                 TierIdentifier = TI;
                 MaxTraitToApply = MaxTrait;
                 TagFactory();
+                TickInject();
             }
 
             protected GenericFactory FactoryAimingAt;
@@ -170,54 +216,30 @@ public class Factories {
         public class PrototypeTier : GenericTierEffect {
             public PrototypeTier(GenericFactory F) : base(F, -0.10, null, null, Enums.FactoryTier.Prototype, 2) {
                 base.ApplyEffect();
-                base.TickInject();
+                new Traits.TimeDialation(F, GivenByTier, MinInterval, MaxInterval, TickReduceAmount, 0.30);
             }
 
-            public override void TickInject() {
-                void SkipTickChance() {
-                    if (RNG.NextDouble() >= 0.70) {
-                        FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
-                        Console.WriteLine("PrototypeTier SkipTickChance was triggered!");
-                    }
-                    Console.WriteLine("PrototypeTier SkipTickChance was Called!");
-                }
-                FactoryAimingAt.OnTickEffect += SkipTickChance;
-            }
+            private const int MinInterval = 30;
+            private const int MaxInterval = 50;
+            private const int TickReduceAmount = 10;
+            private const bool GivenByTier = true;
         }
 
         public class PrototypePlusTier : GenericTierEffect {
             public PrototypePlusTier(GenericFactory F) : base(F, -0.05, null, null, Enums.FactoryTier.PrototypePlus, 2) {
                 base.ApplyEffect();
-                base.TickInject();
+                new Traits.TimeDialation(F, GivenByTier, MinInterval, MaxInterval, TickReduceAmount, 0.10);
             }
 
-            public override void TickInject() {
-                void Plus_SkipTickChance() {
-                    if (RNG.NextDouble() >= 0.70) {
-                        FactoryAimingAt.CurrTick = Math.Max(0, FactoryAimingAt.CurrTick - 1);
-                        Console.WriteLine("Prototype+Tier SkipTickChance was triggered!");
-                    }
-                    Console.WriteLine("Prototype+Tier SkipTickChance was Called!");
-                }
-                FactoryAimingAt.OnTickEffect += Plus_SkipTickChance;
-            }
+            private const int MinInterval = 60;
+            private const int MaxInterval = 80;
+            private const int TickReduceAmount = 5;
+            private const bool GivenByTier = true;
         }
 
         public class PrototypePlusPlusTier : GenericTierEffect {
             public PrototypePlusPlusTier(GenericFactory F) : base(F, null, null, null, Enums.FactoryTier.PrototypePlusPlus, 2) {
                 base.ApplyEffect();
-                base.TickInject();
-            }
-
-            public override void TickInject() {
-                void PlusPlus_DoubleTickIncrementChance() {
-                    if (RNG.NextDouble() >= 0.90) {
-                        FactoryAimingAt.CurrTick++;
-                        Console.WriteLine("Prototype++Tier SkipTickChance was triggered!");
-                    }
-                    Console.WriteLine("Prototype++Tier SkipTickChance was Called!");
-                }
-                FactoryAimingAt.OnTickEffect += PlusPlus_DoubleTickIncrementChance;
             }
         }
     }
@@ -234,9 +256,9 @@ public class Factories {
             { Enums.FactoryTier.PrototypePlusPlus, (ToAttachTo) => new TierApplier.PrototypePlusPlusTier(ToAttachTo) }
         };
         public static readonly Dictionary<Enums.FactoryTrait, Func<GenericFactory, Traits.GenericTrait>> TraitMap = new() {
-            { Enums.FactoryTrait.PassedQualityAssurance, (ToAttachTo) => new Traits.PassedQualityAssurance(ToAttachTo) },
-            { Enums.FactoryTrait.ThoughtfulMakers, (ToAttachTo) => new Traits.ThoughtfulMakers(ToAttachTo) },
-            { Enums.FactoryTrait.BrokenOutputHatch, (ToAttachTo) => new Traits.BrokenOutputHatch(ToAttachTo) }
+            { Enums.FactoryTrait.PassedQualityAssurance, (ToAttachTo) => new Traits.PassedQualityAssurance(ToAttachTo, false) },
+            { Enums.FactoryTrait.ThoughtfulMakers, (ToAttachTo) => new Traits.ThoughtfulMakers(ToAttachTo, false) },
+            { Enums.FactoryTrait.BrokenOutputHatch, (ToAttachTo) => new Traits.BrokenOutputHatch(ToAttachTo, false) }
         };
 
         public static int MakeNewFactory(

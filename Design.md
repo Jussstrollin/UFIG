@@ -24,27 +24,27 @@
  - No reduced Output.
  - Rare
 
-### Refined : Max 2 Traits
+### Refined : Max 2 Traits *
  - Lesser Chance to get Low quality / Negative Trait.
  - Increased Output Values by 8%.
  - has a chance to double Currtick++ effectively making it produce faster from time to time.
  - More expensive and requires unlocking on Workshop.
 
-### Advanced : Max 3 Traits
+### Advanced : Max 3 Traits *
  - Higher Chance to Get Positive Trait
  - Increased Output Values by 15%
  - Decreased Input values by 5%
  - Unlocks the use of Catalysts (to be elaborated further).
  - Even more expensive
 
-### Experimental : Max 5 Traits
+### Experimental : Max 5 Traits *
  - Has high Chance to get both Positive and Negative traits.
  - Always has {Unstable Trait}
  - Always has {dangerous Construction Trait}
  - Use of more enhanced Catalysts
  - Rare tier can be obtained from the start by luck, albeit a blessing or a curse.
 
-### Apex : 4 Max Traits
+### Apex : 4 Max Traits *
  - Increased Output Values by 50%
  - Decreased Input Values by 30%
  - Always has {Control Trait}
@@ -53,7 +53,7 @@
  - Rarest Tier only possible to be obtained after {??? Research}
 
 ## Traits
- - On buy, a factory will always fill its two slots by a random trait, a Factory's Max trait is not filled by the trait given by its tier.
+ - On buy, a factory will try to fill its two slots by a random trait, a Factory's Max trait is not filled by the trait given by its tier.
 
 ### [Miner] Bedrock
  - Oops, Unfortunate placement of a miner, a hard layer of bedrock was found causing it to slowdown ever so often when mining.

@@ -11,6 +11,7 @@ public class Enums {
     };
 
     public enum FactoryTrait {
+        TimeDialation,
         PassedQualityAssurance,
         ThoughtfulMakers,
         BrokenOutputHatch,
