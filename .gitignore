@@ -7,3 +7,6 @@ Save.json
 .editorconfig
 Hold.txt
 .agents/
+.devin/
+LatestGame.log
+SadConsole_UI_overview.md

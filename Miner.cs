@@ -13,9 +13,6 @@ public class Miners {
 
         public static Enums.MinerTrait? RollMinerTrait() {
             long Value = RNG.NextInt64(100);
-            // PristineCondition = 20%
-            // PoorMounting = 20%
-            // Null/PlaceHolderForFutureTraits = 60%
 
             if (Value >= 0 && Value < 20) {
                 return Enums.MinerTrait.PristineCondition;

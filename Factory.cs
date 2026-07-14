@@ -291,7 +291,7 @@ public class Factories {
         }
 
         private static void GetThisBoiATrait(GenericFactory WhoToGive) {
-            if (WhoToGive.TraitList.Count != 0) { Console.WriteLine("Failed to give boi a trait: Factory already have a trait!"); return; }
+            if (WhoToGive.TraitList.Count != 0) { return; }
             for (int i = 0; i < WhoToGive.MaxTrait; i++) {
                 Enums.FactoryTrait? Trait = Traits.RollTraitFor();
 

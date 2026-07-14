@@ -1,7 +1,9 @@
 using System;
+using SadConsole;
+using System.IO;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
+using SadConsole.Configuration;
+using SadConsole.Input;
 
 namespace StellaForge;
 
@@ -9,10 +11,22 @@ public static class Main {
     private static double _tickTimer { get; set; } = 0;
     private const double TickInterval = 0.5;
 
+
     public static event Action? OnUpdate;
+    // public static event Action? OnRender;
 
     public static void Setup() {
+        Logger.Start();
+        Logger.Log("Game Started..");
+
+        Keybind.KeyBoardState = Game.Instance.GetKeyboardState();
+        Logger.Log("Started KeyBoard..");
+
+        UI.UI_Manager.InitUI();
+        Logger.Log("Ui Started...");
+
         if (GlobalState.OutpostPlayerOn != null) {
+            Logger.Log("Existing Outpost Found.");
             return;
         }
 
@@ -25,63 +39,88 @@ public static class Main {
         OnUpdate += GlobalState.OutpostPlayerOn.MinersTick;
     }
 
-    public static void Loop(GameTime gameTime) {
-        Keybinds.KeyHandle(gameTime);
-        _tickTimer += gameTime.ElapsedGameTime.TotalSeconds;
+    public static void Loop(GameHost host) {
+        // Keybinds.KeyHandle(gameTime);
+        _tickTimer += 0.016; // Approximate 60fps for now
+        Keybind.currTime += 0.016;
+        Keybind.HandleKeyPress();
 
         if (_tickTimer >= TickInterval) {
             _tickTimer -= TickInterval;
             OnUpdate?.Invoke();
+            // OnRender?.Invoke();
         }
     }
 }
 
-public static class Keybinds { // done without regard for quality, god pls refactor when you feel like doing it.
-    public static readonly Dictionary<Keys, Action> Binds = new() {
-        { Keys.A, () => DebugAddFactoryBind(Enums.FactoryTypes.AlphaFactory, Enums.FactoryTier.PrototypePlusPlus)},
-        { Keys.B, () => DebugAddFactoryBind(Enums.FactoryTypes.BetaFactory, Enums.FactoryTier.PrototypePlusPlus)},
-        { Keys.G, () => DebugAddFactoryBind(Enums.FactoryTypes.GammaFactory, Enums.FactoryTier.Prototype)},
-        { Keys.R, () => DebugRerollFactoryTrait()}
+public static class Keybind {
+    public static IKeyboardState? KeyBoardState;
+    static double LastTime;
+    public static double currTime;
+
+    public static readonly Dictionary<Keys, Action> KeyMap = new() {
+        { Keys.Escape, () => Exit() },
+        { Keys.A, () => DebugAlphaFactorySpawn() }
     };
 
-    static double LastTime;
+    private static void Exit() {
+        Logger.Log("Game Ended.");
+        Game.Instance.Stop();
+    }
 
-    public static void KeyHandle(GameTime gameTime) {
-        double currentTime = gameTime.TotalGameTime.TotalSeconds;
-        KeyboardState state = Keyboard.GetState();
-        Keys[] pressedKeys = state.GetPressedKeys();
+    private static void DebugAlphaFactorySpawn() {
+        if (GlobalState.OutpostPlayerOn != null) {
+            Factories.FactoryCreationRelated.MakeNewFactory(GlobalState.OutpostPlayerOn, Enums.FactoryTypes.AlphaFactory, new Storage(), Enums.FactoryTier.Prototype);
+        }
+    }
 
-        if ((currentTime - LastTime) <= 0.5) {
-            return; // Still on cooldown
+    public static void HandleKeyPress() {
+        if (KeyBoardState == null) { return; }
+
+        if ((currTime - LastTime) <= 0.5) {
+            return;
         }
 
-        foreach (Keys key in pressedKeys) {
-            if (Binds.TryGetValue(key, out Action action)) {
-                action();
-                LastTime = currentTime;
-                break; // Only one key per press
+        Keys[] CurrPressedkey = KeyBoardState.GetPressedKeys();
+        if (CurrPressedkey.Length == 0) { return; }
+
+        for (int i = 0; i <= (CurrPressedkey.Length - 1); i++) {
+            if (KeyMap.TryGetValue(CurrPressedkey[i], out var Function)) {
+                Logger.Log("FoundKey!");
+                Function.Invoke();
+                LastTime = currTime;
             }
         }
-    }
-
-    public static void DebugAddFactoryBind(Enums.FactoryTypes Type, Enums.FactoryTier Tier) {
-        Factories.FactoryCreationRelated.MakeNewFactory(GlobalState.OutpostPlayerOn, Type, GlobalState.OutpostPlayerOn.FactoryStorage, Tier);
-    }
-
-    public static void DebugRerollFactoryTrait() {
-        foreach (var Factory in GlobalState.OutpostPlayerOn.FactoryList)
-            Factories.FactoryCreationRelated.RerollTraits(Factory);
     }
 }
 
 public static class GlobalState {
-    public static MainFactory OutpostPlayerOn;
+    public static MainFactory? OutpostPlayerOn;
     public static List<MainFactory> Outposts = new List<MainFactory>();
 }
 
+public static class Logger {
+    private static readonly string LogPath = "LatestGame.log";
+    private static string TimeStamp => DateTime.Now.ToString("[HH : mm : ss]");
+
+    public static void Start() {
+        File.Delete(LogPath);
+    }
+
+    public static void Log(string Msg) {
+        string Log = $"{TimeStamp} > {Msg}";
+        File.AppendAllText(LogPath, Log + '\n');
+    }
+
+    public static void ErrorLog(string Msg) {
+        string Log = $"{TimeStamp} > [ERROR] {Msg}";
+        File.AppendAllText(LogPath, Log + '\n');
+    }
+}
+
 public class MainFactory {
-    public event Action OnFactoryTick;
-    public event Action OnMinerTick;
+    public event Action? OnFactoryTick;
+    public event Action? OnMinerTick;
     public Storage FactoryStorage = new Storage();
 
     public List<Factories.GenericFactory> FactoryList = new();

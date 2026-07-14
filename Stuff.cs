@@ -2,6 +2,11 @@ using System.Collections.Generic;
 
 namespace StellaForge;
 
+public class GlobalVariables {
+    public static readonly int MainWindow_W_Cell = 90;
+    public static readonly int MainWindow_H_Cell = MainWindow_W_Cell / 3;
+}
+
 public class Enums {
     public enum ResourceType {
         Essence,
@@ -57,6 +62,8 @@ public class Storage {
 
     public enum ReturnType { SUCCESS, FAIL, INVALID }
 
+    public event Action? OnStorageChange;
+
     public ReturnType TryAppend(Enums.ResourceType Resource, double Val) {
         if (Val < 0) {
             return ReturnType.INVALID;
@@ -72,6 +79,7 @@ public class Storage {
             return ReturnType.FAIL;
         }
         else {
+            OnStorageChange?.Invoke();
             return ReturnType.SUCCESS;
         }
     }
@@ -82,6 +90,7 @@ public class Storage {
                 return ReturnType.FAIL;
             }
             else {
+                OnStorageChange?.Invoke();
                 return ReturnType.SUCCESS;
             }
         }
@@ -102,6 +111,7 @@ public class Storage {
             return ReturnType.FAIL;
         }
         else {
+            OnStorageChange?.Invoke();
             return ReturnType.SUCCESS;
         }
     }
