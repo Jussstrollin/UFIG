@@ -46,6 +46,8 @@ public class UI {
         public UIMain() : base(GlobalVariables.MainWindow_W_Cell, GlobalVariables.MainWindow_H_Cell) {
             AssembleResourcePanel();
             AssembleFactoryList();
+            AssembleFactoryPanel();
+            AssembleControlPanel();
         }
 
 
@@ -60,13 +62,27 @@ public class UI {
         ControlsConsole? FactoryList;
         List<Console>? FactoryCardList;
         Factories.GenericFactory? CurrentFactoryRaised;
+        private event Action? NewFactoryRaised;
         const int FactoryList_W = 30;
         const int FactoryList_H = 13;
         const int FactoryList_X = 1;
         const int FactoryList_Y = 1 + ResourcePanel_H + Padding;
         private void SelectFactory(Factories.GenericFactory ToSel) {
             CurrentFactoryRaised = ToSel;
+            NewFactoryRaised?.Invoke();
         }
+
+        ControlsConsole? FactoryPanel;
+        const int FactoryPanel_W = 52;
+        const int FactoryPanel_H = 20;
+        const int FactoryPanel_X = 2 + ResourcePanel_W + Padding;
+        const int FactoryPanel_Y = 1;
+
+        ControlsConsole? ControlPanel;
+        const int ControlPanel_W = 52;
+        const int ControlPanel_H = 4;
+        const int ControlPanel_X = FactoryPanel_X;
+        const int ControlPanel_Y = 1 + FactoryPanel_H + Padding;
 
         private void AssembleResourcePanel() {
             Logger.Log("[Main] : Loading Resource Panel.");
@@ -87,6 +103,7 @@ public class UI {
 
             FactoryList = new ControlsConsole(FactoryList_W, FactoryList_H);
             FactoryList.Position = new Point(FactoryList_X, FactoryList_Y);
+
             Border.CreateForSurface(FactoryList, "Factory List");
 
             FactoryCardList = new();
@@ -100,6 +117,35 @@ public class UI {
 
             Children.Add(FactoryList);
             UpdateFactoryList();
+        }
+
+        private void AssembleFactoryPanel() {
+            Logger.Log("[Main] : Loading AssembleFactoryList.");
+
+            FactoryPanel = new ControlsConsole(FactoryPanel_W, FactoryPanel_H);
+            FactoryPanel.Position = new Point(FactoryPanel_X, FactoryPanel_Y);
+            Border.CreateForSurface(FactoryPanel, "Factory");
+
+            NewFactoryRaised += UpdateFactoryPanel;
+
+            if (GlobalState.OutpostPlayerOn != null) {
+                GlobalState.OutpostPlayerOn.OnOutpostChange += UpdateFactoryPanel;
+            }
+            else {
+                Logger.ErrorLog("AssembleFactoryPanel : Cannot Hook To Outpost, Outpost does not exist!");
+            }
+
+            Children.Add(FactoryPanel);
+            UpdateFactoryPanel();
+        }
+
+        private void AssembleControlPanel() {
+            Logger.Log("[Main] : Loading ControlPanel..");
+            ControlPanel = new ControlsConsole(ControlPanel_W, ControlPanel_H);
+            ControlPanel.Position = new Point(ControlPanel_X, ControlPanel_Y);
+            Border.CreateForSurface(ControlPanel, "Controls");
+
+            Children.Add(ControlPanel);
         }
 
         private void UpdateResourcePanel() {
@@ -162,12 +208,12 @@ public class UI {
 
                 // Click effect
                 Factorycard.MouseButtonClicked += (sender, args) => {
-                    UpdateFactoryList();
                     SelectFactory(Factory);
                     Raised = false;
                     Factorycard.Surface.DefaultBackground = RaisedCol;
                     Factorycard.Surface.Clear();
                     Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
+                    UpdateFactoryList();
                 };
 
                 Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
@@ -175,6 +221,53 @@ public class UI {
                 FactoryCardList.Add(Factorycard);
                 FactoryList.Children.Add(Factorycard);
             }
+        }
+
+        private void UpdateFactoryPanel() {
+            if (FactoryPanel == null) {
+                Logger.Log("[Main.FactoryPanel] : UpdateFactoryPanel Was Called whilst FactoryPanel is Null. FactoryPanel was Possibly nulled Unknowingly.");
+                return;
+            }
+
+            FactoryPanel.Surface.Clear();
+            Factories.GenericFactory? FactoryRaised = CurrentFactoryRaised;
+
+            if (FactoryRaised == null) {
+                FactoryPanel.Surface.Print(0, 0, " Please Select a Factory ");
+                return;
+            }
+
+            Color FactoryTypeColor = FactoryRaised.FactoryType switch {
+                Enums.FactoryTypes.AlphaFactory => Color.AnsiYellowBright,
+                Enums.FactoryTypes.BetaFactory => Color.AnsiBlue,
+                Enums.FactoryTypes.GammaFactory => Color.AnsiGreen,
+                _ => Color.White
+            };
+
+            int TraitListOffset = 0;
+            int Padding = 2;
+
+            string Spacer = $" -------------------------------------------------- ";
+
+            FactoryPanel.Surface.Print(1, 0, $"{FactoryRaised.FactoryType.ToString()}", FactoryTypeColor); // Will Be replaced when Factories can be names / have Generated Name
+
+            FactoryPanel.Surface.Print(0, 2, Spacer);
+
+            FactoryPanel.Surface.Print(1, 4, $"Type : {FactoryRaised.FactoryType.ToString()}");
+            FactoryPanel.Surface.Print(1, 5, $"Tier : {FactoryRaised.FactoryTier.ToString()}");
+
+            FactoryPanel.Surface.Print(1, 7, $"Traits : {FactoryRaised.TraitList.Count.ToString()}");
+            FactoryPanel.Surface.Print(1, 8, "[");
+
+            if (FactoryRaised.TraitList.Count != 0) {
+                for (int i = 0; i < FactoryRaised.TraitList.Count; i++) {
+                    string Content = $"{FactoryRaised.TraitList[i].TraitIdentifier.ToString()} [?]";
+                    FactoryPanel.Surface.Print(1 + TraitListOffset + Padding, 8, Content);
+                    TraitListOffset += Content.Length + 1;
+                }
+            }
+
+            FactoryPanel.Surface.Print(2 + TraitListOffset + Padding, 8, "]");
         }
 
         public override void UpdateSurfaces() {

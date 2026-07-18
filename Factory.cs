@@ -281,6 +281,7 @@ public class Factories {
             GetThisBoiATrait(NewFactory);
 
             MainFactoryToAttachOn.FactoryList.Add(NewFactory);
+            MainFactoryToAttachOn.InvokeChangeHasHappened();
             return 0;
         }
 

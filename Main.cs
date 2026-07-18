@@ -61,7 +61,8 @@ public static class Keybind {
 
     public static readonly Dictionary<Keys, Action> KeyMap = new() {
         { Keys.Escape, () => Exit() },
-        { Keys.A, () => DebugAlphaFactorySpawn() }
+        { Keys.A, () => DebugAlphaFactorySpawn() },
+        { Keys.R, () => DebugRerollFactoryTrait() }
     };
 
     private static void Exit() {
@@ -72,6 +73,15 @@ public static class Keybind {
     private static void DebugAlphaFactorySpawn() {
         if (GlobalState.OutpostPlayerOn != null) {
             Factories.FactoryCreationRelated.MakeNewFactory(GlobalState.OutpostPlayerOn, Enums.FactoryTypes.AlphaFactory, new Storage(), Enums.FactoryTier.Prototype);
+        }
+    }
+
+    public static void DebugRerollFactoryTrait() {
+        if (GlobalState.OutpostPlayerOn != null) {
+            foreach (var Factory in GlobalState.OutpostPlayerOn.FactoryList) {
+                Factories.FactoryCreationRelated.RerollTraits(Factory);
+                GlobalState.OutpostPlayerOn.InvokeChangeHasHappened();
+            }
         }
     }
 
