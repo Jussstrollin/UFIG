@@ -90,7 +90,6 @@ public class Storage {
                 return ReturnType.FAIL;
             }
             else {
-                OnStorageChange?.Invoke();
                 return ReturnType.SUCCESS;
             }
         }

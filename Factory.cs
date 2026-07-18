@@ -92,12 +92,12 @@ public class Factories {
 
                 if (Removed) {
                     if (OutputMultipler != null) {
-                        if (OutputMultipler > -1.0) {
+                        if (OutputMultipler >= -1.0) {
                             FactoryOn.OutputMult /= (double)(1.0 + OutputMultipler);
                         }
                     }
                     if (InputMultiplier != null) {
-                        if (InputMultiplier > -1.0) {
+                        if (InputMultiplier >= -1.0) {
                             FactoryOn.InputMult /= (double)(1.0 + InputMultiplier);
                         }
                     }
@@ -393,12 +393,12 @@ public class Factories {
                 ToAttachTo.OnFactoryTick -= Tick;
                 OnTickEffect = null;
 
-                // Clean up traits
-                foreach (var Trait in TraitList) {
-                    Trait.RemoveSelf();
+                for (int i = TraitList.Count - 1; i != -1; i--) {
+                    TraitList[i].RemoveSelf();
                 }
-                foreach (var Trait in TierGivenTraitList) {
-                    Trait.RemoveSelf();
+
+                for (int i = TierGivenTraitList.Count - 1; i != -1; i--) {
+                    TierGivenTraitList[i].RemoveSelf();
                 }
 
                 // Clear collections
@@ -406,6 +406,8 @@ public class Factories {
                 Outputs.Clear();
                 TraitList.Clear();
                 TierGivenTraitList.Clear();
+
+                ToAttachTo.InvokeChangeHasHappened();
 
                 // Clear references
                 ToAttachTo = null!;

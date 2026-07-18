@@ -117,6 +117,26 @@ public class Miners {
                 CurrTick = 0;
             }
         }
+
+        public virtual void Kill() {
+            var Removed = AttachedTo.MinersList.Remove(this);
+
+            if (Removed) {
+                AttachedTo.OnMinerTick -= Tick;
+                OnTickEffect = null;
+
+                for (int i = TraitList.Count - 1; i != -1; i--) {
+                    TraitList[i].RemoveSelf();
+                }
+
+                Outputs.Clear();
+                TraitList.Clear();
+
+                AttachedTo.InvokeChangeHasHappened();
+
+                AttachedTo = null;
+            }
+        }
     }
 
     public class EssenceMiner : GenericMiner {
