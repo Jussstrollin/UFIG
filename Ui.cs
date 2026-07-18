@@ -91,11 +91,15 @@ public class UI {
 
             FactoryCardList = new();
 
-            // if (GlobalState.OutpostPlayerOn != null) {
-            //     GlobalState.OutpostPlayerOn.OnOutpostChange += UpdateResourcePanel;
-            // }
+            if (GlobalState.OutpostPlayerOn != null) {
+                GlobalState.OutpostPlayerOn.OnOutpostChange += UpdateFactoryList;
+            }
+            else {
+                Logger.ErrorLog("AssembleFactoryList : Cannot Hook To Outpost, Outpost does not exist!");
+            }
 
             Children.Add(FactoryList);
+            UpdateFactoryList();
         }
 
         private void UpdateResourcePanel() {
@@ -123,8 +127,47 @@ public class UI {
                 Console Factorycard = new(FactoryList_W - Padding, 1);
                 Factorycard.Position = new Point(1, Offset_Y);
                 Offset_Y++;
+
+                Color Default = Color.Black;
+                Color Hover = Color.DimGray;
+                Color Clicked = Color.AliceBlue;
+                Color RaisedCol = Color.AnsiBlue;
+                bool Raised = false;
+
+                if (CurrentFactoryRaised == Factory) {
+                    Factorycard.Surface.DefaultBackground = RaisedCol;
+                    Raised = true;
+                }
+                else {
+                    Raised = false;
+                    Factorycard.Surface.DefaultBackground = Default;
+                }
+
+                // Hover effect
+                Factorycard.MouseEnter += (sender, args) => {
+                    if (!Raised) {
+                        Factorycard.Surface.DefaultBackground = Hover;
+                        Factorycard.Surface.Clear();
+                        Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
+                    }
+                };
+
+                Factorycard.MouseExit += (sender, args) => {
+                    if (Raised) { Factorycard.Surface.DefaultBackground = RaisedCol; }
+                    else { Factorycard.Surface.DefaultBackground = Default; }
+
+                    Factorycard.Surface.Clear();
+                    Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
+                };
+
+                // Click effect
                 Factorycard.MouseButtonClicked += (sender, args) => {
+                    UpdateFactoryList();
                     SelectFactory(Factory);
+                    Raised = false;
+                    Factorycard.Surface.DefaultBackground = RaisedCol;
+                    Factorycard.Surface.Clear();
+                    Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
                 };
 
                 Factorycard.Surface.Print(0, 0, $"[{Factory.FactoryType.ToString()}] : {Factory.FactoryTier.ToString()}");
@@ -136,7 +179,6 @@ public class UI {
 
         public override void UpdateSurfaces() {
             UpdateResourcePanel();
-            UpdateFactoryList();
         }
     }
 }

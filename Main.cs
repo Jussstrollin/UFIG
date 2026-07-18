@@ -22,9 +22,6 @@ public static class Main {
         Keybind.KeyBoardState = Game.Instance.GetKeyboardState();
         Logger.Log("Started KeyBoard..");
 
-        UI.UI_Manager.InitUI();
-        Logger.Log("Ui Started...");
-
         if (GlobalState.OutpostPlayerOn != null) {
             Logger.Log("Existing Outpost Found.");
             return;
@@ -37,6 +34,10 @@ public static class Main {
         Miners.AddMiner(Miners.MinerType.EssenceMiner, GlobalState.OutpostPlayerOn);
         OnUpdate += GlobalState.OutpostPlayerOn.FactoryTick;
         OnUpdate += GlobalState.OutpostPlayerOn.MinersTick;
+        Logger.Log("Game Initialized..");
+
+        UI.UI_Manager.InitUI();
+        Logger.Log("Ui Started...");
     }
 
     public static void Loop(GameHost host) {
